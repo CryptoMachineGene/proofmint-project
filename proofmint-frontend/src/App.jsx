@@ -209,13 +209,14 @@ export default function App() {
         <header className="flex items-center justify-between mb-6">
           <div>
             <h1 className="text-2xl font-bold">Proofmint Crowdsale</h1>
-            <p className="text-sm text-gray-600">Minimal, production-ready demo UI</p>
+            <p className="text-sm text-gray-600"></p>
           </div>
           <button
-            onClick={connect}
+            // onClick={connect}
+            disabled
             className="px-4 py-2 rounded-2xl shadow bg-black text-white hover:opacity-90"
           >
-            {account ? `${account.slice(0, 6)}…${account.slice(-4)}` : "Connect Wallet"}
+            {account ? `${account.slice(0, 6)}…${account.slice(-4)}` : "Connect Wallet (coming soon)"}
           </button>
         </header>
 
@@ -286,7 +287,7 @@ export default function App() {
           </form>
         </Section>
 
-        <Section title="Receipt NFT (optional)">
+        {/* <Section title="Receipt NFT (optional)">
           <p className="text-sm text-gray-600">
             If your flow mints a <span className="font-semibold">ProofNFT</span> as a receipt, you can add a
             viewer here later (e.g., list owned token IDs). This UI is scaffolded to keep focus on the main sale.
@@ -295,7 +296,7 @@ export default function App() {
 
         <footer className="mt-8 text-xs text-gray-500">
           <p>Tip: Replace ABI fragments with your exact compiled ABIs for 1:1 compatibility.</p>
-        </footer>
+        </footer> */}
       </div>
     </div>
   );
