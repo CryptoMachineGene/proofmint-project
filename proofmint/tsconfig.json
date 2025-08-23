@@ -1,0 +1,17 @@
+// tsconfig.json
+{
+  "compilerOptions": {
+    "target": "ES2021",
+    "module": "Node16",
+    "moduleResolution": "Node16",
+    "resolveJsonModule": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "strict": true,
+    "skipLibCheck": true,
+    "outDir": "dist",
+    "types": ["node", "mocha", "chai", "hardhat"]
+  },
+  "include": ["hardhat.config.ts", "scripts", "tasks", "test", "typechain-types"],
+  "exclude": ["dist", "node_modules"]
+}

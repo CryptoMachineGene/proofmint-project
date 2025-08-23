@@ -1,0 +1,30 @@
+# Node
+node_modules
+npm-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+package-lock.json
+
+# Env / secrets
+.env
+.env.*
+
+# Hardhat
+cache/
+artifacts/
+
+# TypeChain
+typechain/
+typechain-types/
+
+# Solidity coverage
+coverage/
+coverage.json
+lcov.info
+
+# Hardhat Ignition local deployments
+ignition/deployments/chain-31337
+
+# OS cruft
+.DS_Store
+Thumbs.db
