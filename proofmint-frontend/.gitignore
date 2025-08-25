@@ -23,3 +23,8 @@ dist-ssr
 *.sln
 *.sw?
 .env.local
+
+# frontend
+proofmint-frontend/.env.local
+proofmint-frontend/node_modules
+proofmint-frontend/dist
