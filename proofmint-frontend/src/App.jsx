@@ -1,34 +1,19 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, useCallback } from "react";
 import { ethers } from "ethers";
 
 /**
- * PROOFMINT – Minimal Frontend dApp
- * ---------------------------------
- * What this gives you out of the box:
- * - Wallet connect (MetaMask or any EIP-1193 provider)
- * - Sepolia network check + helpful errors
- * - Read crowdsale state: rate, cap, raised, token, nft
- * - Buy flow: user enters ETH => tx to crowdsale (auto-uses `buyTokens(address)` if available, else simple payable send)
- * - Clean Tailwind UI ready for Vercel/Netlify
- *
- * QUICK START
- * 1) npm i react react-dom ethers
- * 2) Put your addresses in the ADDRESSES object below
- * 3) Replace ABI fragments with the ones from your artifacts if signatures differ
- * 4) Mount <App /> in your index.jsx and run: npm run dev (or your favorite dev server)
- *
- * NOTE: This file is self-contained for demo speed. In a real repo,
- * split components and move ABIs to /src/abi/*.json.
+ * Proofmint Crowdsale — Single-file demo (merged)
+ * - Uses Vite env vars for addresses (no backend env changes)
+ * - Real Refresh via a tick state
+ * - Proper connect + wallet event reactions (no page reload)
  */
 
-// ====== 🔧 CONFIG ======
-const ADDRESSES = {
-  sepolia: {
-    crowdsale: "0xD055853f6F1fcF9CB562eDd634aDB87835300261", // <— example from your logs; replace if needed
-    token: "0x9712820E18e5f2B8cBe3da25f31b8f2F8c8576bF", // optional: read from contract if exposed
-    proofNft: "0xa8750E228B20d1BC302d0Acdd8101d643E04E323", // optional: read from contract if exposed
-  },
-};
+// ====== 🔧 CONFIG (via frontend env)
+const NETWORK = (import.meta.env.VITE_NETWORK_NAME || "sepolia").toLowerCase();
+const CROWDSALE_ADDRESS = import.meta.env.VITE_CROWDSALE_ADDRESS; // required
+const PROOFNFT_ADDRESS   = import.meta.env.VITE_PROOFNFT_ADDRESS; // optional
+
+const SEPOLIA_CHAIN_ID = 11155111;
 
 // Minimal ABI fragments — replace with your exact ABIs if names differ
 const CROWDSALE_ABI = [
@@ -39,8 +24,6 @@ const CROWDSALE_ABI = [
   "function token() view returns (address)",
   // Common buy function (OpenZeppelin style)
   "function buyTokens(address beneficiary) payable",
-  // Optional getters (ignore if your contract doesn't have these)
-  "function wallet() view returns (address)",
 ];
 
 const ERC20_ABI = [
@@ -50,22 +33,12 @@ const ERC20_ABI = [
   "function balanceOf(address) view returns (uint256)",
 ];
 
-const ERC721_ABI = [
-  "function name() view returns (string)",
-  "function symbol() view returns (string)",
-  // If you added a receipt getter, add here, e.g. tokensOfOwner(address)
-];
-
-function Section({ title, children, right }) {
-  return (
-    <div className="bg-white rounded-2xl shadow p-6 mb-6 border border-gray-100">
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-xl font-semibold">{title}</h2>
-        {right}
-      </div>
-      {children}
-    </div>
-  );
+// Small helpers
+function getProvider() {
+  if (window.ethereum) return new ethers.BrowserProvider(window.ethereum);
+  const rpc = import.meta.env.VITE_FALLBACK_RPC;
+  if (rpc) return new ethers.JsonRpcProvider(rpc); // read-only
+  throw new Error("No injected wallet (MetaMask) found");
 }
 
 export default function App() {
@@ -78,58 +51,80 @@ export default function App() {
   const [rate, setRate] = useState(null);
   const [cap, setCap] = useState(null);
   const [raised, setRaised] = useState(null);
-  const [tokenAddr, setTokenAddr] = useState(ADDRESSES.sepolia.token || null);
+  const [tokenAddr, setTokenAddr] = useState(null);
   const [tokenMeta, setTokenMeta] = useState({ name: "", symbol: "", decimals: 18 });
 
-  const crowdsale = useMemo(() => {
-    if (!provider || !chainId) return null;
-    if (chainId !== 11155111) return null; // Sepolia
-    return new ethers.Contract(ADDRESSES.sepolia.crowdsale, CROWDSALE_ABI, provider);
-  }, [provider, chainId]);
+  // NEW: tick to force refreshes
+  const [refreshTick, setRefreshTick] = useState(0);
 
-  const token = useMemo(() => {
-    if (!provider || !tokenAddr) return null;
-    return new ethers.Contract(tokenAddr, ERC20_ABI, provider);
-  }, [provider, tokenAddr]);
-
+  // Init provider + initial chain
   useEffect(() => {
-    if (typeof window === "undefined") return;
-    if (!window.ethereum) return;
-
-    const _provider = new ethers.BrowserProvider(window.ethereum);
+    if (!window?.ethereum) return;
+    const _provider = getProvider();
     setProvider(_provider);
 
     (async () => {
       try {
         const net = await _provider.getNetwork();
         setChainId(Number(net.chainId));
-        // Listen for chain/account changes
-        window.ethereum.on("chainChanged", () => window.location.reload());
-        window.ethereum.on("accountsChanged", (accs) => {
-          setAccount(accs[0] || null);
-        });
       } catch (e) {
         console.error(e);
       }
     })();
+
+    // listen to wallet events
+    const onChainChanged = async () => {
+      try {
+        const net = await _provider.getNetwork();
+        setChainId(Number(net.chainId));
+        setRefreshTick((t) => t + 1);
+      } catch {}
+    };
+    const onAccountsChanged = (accs) => {
+      setAccount(accs?.[0] || null);
+      setSigner(null);
+      setRefreshTick((t) => t + 1);
+    };
+
+    window.ethereum.on?.("chainChanged", onChainChanged);
+    window.ethereum.on?.("accountsChanged", onAccountsChanged);
+    return () => {
+      window.ethereum.removeListener?.("chainChanged", onChainChanged);
+      window.ethereum.removeListener?.("accountsChanged", onAccountsChanged);
+    };
   }, []);
 
-  async function connect() {
+  // Contracts (recreated when provider/chain changes)
+  const crowdsale = useMemo(() => {
+    if (!provider || !CROWDSALE_ADDRESS) return null;
+    return new ethers.Contract(CROWDSALE_ADDRESS, CROWDSALE_ABI, provider);
+  }, [provider, CROWDSALE_ADDRESS, chainId]);
+
+  const token = useMemo(() => {
+    if (!provider || !tokenAddr) return null;
+    return new ethers.Contract(tokenAddr, ERC20_ABI, provider);
+  }, [provider, tokenAddr]);
+
+  // Connect wallet
+  const connect = useCallback(async () => {
     if (!provider) return alert("No wallet found. Install MetaMask.");
     try {
       const accs = await provider.send("eth_requestAccounts", []);
-      setAccount(accs[0]);
+      const addr = accs[0];
+      setAccount(addr);
       const _signer = await provider.getSigner();
       setSigner(_signer);
       const net = await provider.getNetwork();
       setChainId(Number(net.chainId));
+      setStatus("");
     } catch (e) {
       console.error(e);
-      alert(e.message);
+      setStatus(e.message || "Failed to connect wallet");
     }
-  }
+  }, [provider]);
 
-  async function readCrowdsale() {
+  // Read crowdsale (called on mount, chain/account changes, and Refresh)
+  const readCrowdsale = useCallback(async () => {
     if (!crowdsale) return;
     setStatus("Reading crowdsale…");
     try {
@@ -139,42 +134,48 @@ export default function App() {
         crowdsale.weiRaised().catch(() => null),
         crowdsale.token().catch(() => null),
       ]);
-      if (r) setRate(Number(r));
-      if (c) setCap(ethers.formatEther(c));
-      if (w) setRaised(ethers.formatEther(w));
-      if (t) setTokenAddr(t);
+      if (r !== null) setRate(Number(r));
+      if (c !== null) setCap(ethers.formatEther(c));
+      if (w !== null) setRaised(ethers.formatEther(w));
+      setTokenAddr(t || null);
       setStatus("");
     } catch (e) {
       console.error(e);
       setStatus("Failed to read crowdsale.");
     }
-  }
-
-  useEffect(() => {
-    if (crowdsale) readCrowdsale();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [crowdsale]);
 
-  useEffect(() => {
-    (async () => {
-      if (!token) return;
-      try {
-        const [name, symbol, decimals] = await Promise.all([
-          token.name().catch(() => ""),
-          token.symbol().catch(() => ""),
-          token.decimals().catch(() => 18),
-        ]);
-        setTokenMeta({ name, symbol, decimals });
-      } catch (e) {
-        // ignore
-      }
-    })();
+  // Read token meta whenever tokenAddr changes or on refresh
+  const readTokenMeta = useCallback(async () => {
+    if (!token) return;
+    try {
+      const [name, symbol, decimals] = await Promise.all([
+        token.name().catch(() => ""),
+        token.symbol().catch(() => ""),
+        token.decimals().catch(() => 18),
+      ]);
+      setTokenMeta({ name, symbol, decimals });
+    } catch {
+      // ignore token meta failures
+    }
   }, [token]);
 
+  // Auto-reads on mount / changes / refresh
+  useEffect(() => {
+    readCrowdsale();
+  }, [readCrowdsale, refreshTick, chainId]);
+
+  useEffect(() => {
+    readTokenMeta();
+  }, [readTokenMeta, refreshTick, tokenAddr]);
+
+  // Buy tokens
   async function handleBuy(e) {
     e.preventDefault();
     if (!signer || !provider) return alert("Connect wallet first.");
-    if (chainId !== 11155111) return alert("Please switch to Sepolia.");
+    if (NETWORK === "sepolia" && chainId !== SEPOLIA_CHAIN_ID) {
+      return alert("Please switch to Sepolia (11155111).");
+    }
 
     const formData = new FormData(e.currentTarget);
     const ethAmount = formData.get("ethAmount");
@@ -185,23 +186,26 @@ export default function App() {
       const saleWithSigner = crowdsale.connect(signer);
       const value = ethers.parseEther(String(ethAmount));
 
-      // Try buyTokens(beneficiary) first; fall back to raw send if not present
+      // Try buyTokens(beneficiary) first; fallback to raw payable send
       let tx;
       try {
         const beneficiary = await signer.getAddress();
         tx = await saleWithSigner.buyTokens(beneficiary, { value });
-      } catch (_) {
-        tx = await signer.sendTransaction({ to: ADDRESSES.sepolia.crowdsale, value });
+      } catch {
+        tx = await signer.sendTransaction({ to: CROWDSALE_ADDRESS, value });
       }
 
       const receipt = await tx.wait();
       setStatus(`Success: ${receipt.hash}`);
-      await readCrowdsale();
+      setRefreshTick((t) => t + 1);
     } catch (e) {
       console.error(e);
       setStatus(e.shortMessage || e.reason || e.message || "Transaction failed");
     }
   }
+
+  const showWrongNet =
+    NETWORK === "sepolia" && chainId && chainId !== SEPOLIA_CHAIN_ID;
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 text-gray-900">
@@ -209,18 +213,19 @@ export default function App() {
         <header className="flex items-center justify-between mb-6">
           <div>
             <h1 className="text-2xl font-bold">Proofmint Crowdsale</h1>
-            <p className="text-sm text-gray-600"></p>
+            <p className="text-sm text-gray-600">
+              Network: <span className="font-semibold capitalize">{NETWORK}</span>
+            </p>
           </div>
           <button
-            // onClick={connect}
-            disabled
-            className="px-4 py-2 rounded-2xl shadow bg-black text-white hover:opacity-90"
+            onClick={connect}
+            className="px-4 py-2 rounded-2xl shadow bg-black text-white hover:opacity-90 disabled:opacity-60"
           >
-            {account ? `${account.slice(0, 6)}…${account.slice(-4)}` : "Connect Wallet (coming soon)"}
+            {account ? `${account.slice(0, 6)}…${account.slice(-4)}` : "Connect Wallet"}
           </button>
         </header>
 
-        {chainId && chainId !== 11155111 && (
+        {showWrongNet && (
           <div className="bg-yellow-100 border border-yellow-300 text-yellow-900 rounded-xl p-4 mb-4">
             You are on chain {chainId}. Please switch to <strong>Sepolia (11155111)</strong>.
           </div>
@@ -234,30 +239,31 @@ export default function App() {
 
         <Section
           title="Sale Overview"
-          right={<button onClick={readCrowdsale} className="text-sm underline">Refresh</button>}
+          right={
+            <button
+              onClick={() => setRefreshTick((t) => t + 1)}
+              className="text-sm underline"
+            >
+              Refresh
+            </button>
+          }
         >
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="bg-gray-50 rounded-xl p-4">
-              <div className="text-xs text-gray-500">Rate</div>
-              <div className="text-lg font-semibold">{rate ?? "—"} tokens / ETH</div>
-            </div>
-            <div className="bg-gray-50 rounded-xl p-4">
-              <div className="text-xs text-gray-500">Cap</div>
-              <div className="text-lg font-semibold">{cap ? `${cap} ETH` : "—"}</div>
-            </div>
-            <div className="bg-gray-50 rounded-xl p-4">
-              <div className="text-xs text-gray-500">Raised</div>
-              <div className="text-lg font-semibold">{raised ? `${raised} ETH` : "—"}</div>
-            </div>
+            <Stat label="Rate" value={rate != null ? `${rate} tokens / ETH` : "—"} />
+            <Stat label="Cap" value={cap ? `${cap} ETH` : "—"} />
+            <Stat label="Raised" value={raised ? `${raised} ETH` : "—"} />
           </div>
-          <div className="mt-4 text-sm text-gray-600">
+          <div className="mt-4 text-sm text-gray-600 space-y-1">
             <div>Token: <span className="font-mono">{tokenAddr || "—"}</span></div>
             {tokenMeta.name && (
               <div>
                 Resolved ERC20: <strong>{tokenMeta.name}</strong> ({tokenMeta.symbol})
               </div>
             )}
-            <div>Crowdsale: <span className="font-mono">{ADDRESSES.sepolia.crowdsale}</span></div>
+            <div>Crowdsale: <span className="font-mono">{CROWDSALE_ADDRESS || "—"}</span></div>
+            {PROOFNFT_ADDRESS && (
+              <div>ProofNFT: <span className="font-mono">{PROOFNFT_ADDRESS}</span></div>
+            )}
           </div>
         </Section>
 
@@ -276,8 +282,8 @@ export default function App() {
             </div>
             <button
               type="submit"
-              className="w-full md:w-auto px-6 py-3 rounded-2xl bg-black text-white shadow hover:opacity-90"
-              disabled={!account || chainId !== 11155111}
+              className="w-full md:w-auto px-6 py-3 rounded-2xl bg-black text-white shadow hover:opacity-90 disabled:opacity-60"
+              disabled={!account || showWrongNet || !CROWDSALE_ADDRESS}
             >
               Purchase
             </button>
@@ -286,18 +292,28 @@ export default function App() {
             )}
           </form>
         </Section>
-
-        {/* <Section title="Receipt NFT (optional)">
-          <p className="text-sm text-gray-600">
-            If your flow mints a <span className="font-semibold">ProofNFT</span> as a receipt, you can add a
-            viewer here later (e.g., list owned token IDs). This UI is scaffolded to keep focus on the main sale.
-          </p>
-        </Section>
-
-        <footer className="mt-8 text-xs text-gray-500">
-          <p>Tip: Replace ABI fragments with your exact compiled ABIs for 1:1 compatibility.</p>
-        </footer> */}
       </div>
+    </div>
+  );
+}
+
+function Section({ title, children, right }) {
+  return (
+    <div className="bg-white rounded-2xl shadow p-6 mb-6 border border-gray-100">
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-xl font-semibold">{title}</h2>
+        {right}
+      </div>
+      {children}
+    </div>
+  );
+}
+
+function Stat({ label, value }) {
+  return (
+    <div className="bg-gray-50 rounded-xl p-4">
+      <div className="text-xs text-gray-500">{label}</div>
+      <div className="text-lg font-semibold">{value}</div>
     </div>
   );
 }
