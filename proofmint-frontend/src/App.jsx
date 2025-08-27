@@ -1,7 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { BrowserProvider, JsonRpcProvider, Contract, parseEther, formatUnits } from "ethers";
-
-
 
 // ---- ENV + constants (match your .env.local names) ----
 const RPC = {
@@ -88,16 +86,35 @@ async function readCrowdsaleStats() {
 // Prefer wallet provider (no CORS), fallback to RPC
 async function getAnyProvider() {
   const eth = window?.ethereum;
+  const fallback = new JsonRpcProvider(RPC.SEPOLIA, RPC.CHAIN_ID);
+  if (!RPC.SEPOLIA) throw new Error("Missing VITE_FALLBACK_RPC");
+
   if (eth) {
     const pick = eth.providers?.find(p => p.isBraveWallet)
              ?? eth.providers?.find(p => p.isMetaMask)
              ?? eth;
     try {
-      return new BrowserProvider(pick); // works for reads without requesting accounts
-    } catch {}
+      const wallet = new BrowserProvider(pick);
+      const net = await wallet.getNetwork();
+      const cid = Number(net.chainId);
+      console.log("wallet network chainId:", cid);
+      if (cid === RPC.CHAIN_ID) {
+        console.log("using wallet provider");
+        return wallet;
+      }
+      console.warn("wallet not on Sepolia; using fallback RPC");
+      return fallback;
+    } catch (e) {
+      console.warn("wallet provider not usable; using fallback RPC", e);
+      return fallback;
+    }
   }
-  // fallback to your read-only RPC (must be CORS-friendly if no wallet)
-  return new JsonRpcProvider(import.meta.env.VITE_FALLBACK_RPC, 11155111);
+
+  console.log(
+    "using fallback RPC:",
+    (RPC.SEPOLIA || "").replace(/(\/v3\/)[^/]+/, "$1****")
+  );
+  return fallback;
 }
 
 // Guard so the UI can’t hang forever
@@ -146,6 +163,15 @@ function shorten(addr) {
   return addr.slice(0, 6) + "…" + addr.slice(-4);
 }
 
+function isWholeToken(ethStr, rateBasePerEth, decimals) {
+  try {
+    const wei = parseEther(ethStr);                         // bigint (wei)
+    const tokensBase = (wei * rateBasePerEth) / (10n ** 18n);
+    return tokensBase % (10n ** BigInt(decimals)) === 0n;   // whole tokens only
+  } catch {
+    return false;
+  }
+}
 
 export default function App() {
 // --- UI State
@@ -153,10 +179,16 @@ const [account, setAccount] = useState("");
 const [connecting, setConnecting] = useState(false);
 const [refreshing, setRefreshing] = useState(false);
 const [stats, setStats] = useState(null); // { rate, capWei, raisedWei, token{...} }
-const [ethAmount, setEthAmount] = useState("0.001");
+const [amountTouched, setAmountTouched] = useState(false);
+const [ethAmount, setEthAmount] = useState("");
 const [txStatus, setTxStatus] = useState("");
 const [errMsg, setErrMsg] = useState("");
 const [lastUpdated, setLastUpdated] = useState(null);
+const refreshingLock = useRef(false);
+const amountValid = useMemo(() => {
+  if (!stats) return false;
+  return isWholeToken(ethAmount, stats.rate, stats.token.decimals);
+}, [stats, ethAmount]);
 
 async function onConnect() {
   setErrMsg("");
@@ -172,24 +204,35 @@ async function onConnect() {
 }
 
 async function onRefresh() {
+  if (refreshingLock.current) return;     // guard
+  refreshingLock.current = true;
   setErrMsg("");
   setRefreshing(true);
   try {
-    console.log("Refreshing…");
-    const data = await readCrowdsaleStats();
-    setStats(data);
-    setLastUpdated(new Date());
+      console.log("Refreshing…");
+      const data = await readCrowdsaleStats();
+      setStats(data);
+      setLastUpdated(new Date());
   } catch (e) {
-    console.error("Refresh error:", e);
-    setErrMsg(e?.message || "Refresh failed");
+      console.error("Refresh error:", e);
+      setErrMsg(e?.message || "Refresh failed");
   } finally {
-    setRefreshing(false);
+      setRefreshing(false);
+      refreshingLock.current = false;
   }
 }
 
 async function onBuy() {
   setErrMsg("");
   setTxStatus("Sending…");
+
+  // guard
+  if (!stats || !isWholeToken(ethAmount, stats.rate, stats.token.decimals)) {
+    setTxStatus("");
+    setErrMsg("Amount must buy a whole number of tokens (try 0.001, 0.002, … ETH).");
+    return; // stop here
+  }
+
   try {
     const receipt = await buyTokensETH({ ethAmount, beneficiary: account });
     setTxStatus(`Mined in block ${receipt.blockNumber}`);
@@ -208,9 +251,12 @@ useEffect(() => {
 
 const fmt = useMemo(() => {
   if (!stats) return null;
-  const eth = (wei) => (Number(wei) / 1e18).toLocaleString(undefined, { maximumFractionDigits: 6 });
+  const eth = (wei) =>
+    (Number(wei) / 1e18).toLocaleString(undefined, { maximumFractionDigits: 6 });
+
   return {
-    rate: stats.rate.toString(),
+    // was: rate: stats.rate.toString(),
+    rate: formatUnits(stats.rate, stats.token.decimals),
     capEth: eth(stats.capWei),
     raisedEth: eth(stats.raisedWei),
     token: stats.token,
@@ -283,17 +329,61 @@ return (
 {/* Buy Tokens */}
 <section className="bg-white rounded-2xl shadow p-5 mb-6">
   <h2 className="text-lg font-semibold mb-3">Buy Tokens</h2>
-  <div className="flex items-end gap-3">
+
+  <form
+    onSubmit={(e) => {
+      e.preventDefault();        // no page reload
+      onBuy();                   // run your buy flow
+    }}
+    className="flex items-end gap-3"
+  >
     <label className="flex-1">
       <div className="text-sm text-gray-600 mb-1">Amount (ETH)</div>
-      <input value={ethAmount} onChange={e => setEthAmount(e.target.value)} type="number" min="0" step="0.0001" className="w-full border rounded-xl px-3 py-2" />
+      <input
+        value={ethAmount}
+        onChange={(e) => { setEthAmount(e.target.value); setAmountTouched(true); }}
+        onFocus={() => setAmountTouched(true)}
+        type="number"
+        min="0"
+        step="0.0001"
+        placeholder="0.001"
+        className="w-full border rounded-xl px-3 py-2"
+      />
+
+      {/* ✅ / ⚠️ hint (only after connect + user interaction) */}
+      {account && stats && amountTouched && (
+        <>
+          {!amountValid ? (
+            <div className="text-xs text-amber-600 mt-1">
+              ⚠️ Must be whole tokens (e.g. 0.001, 0.002… ETH)
+            </div>
+          ) : (
+            <div className="text-xs text-green-600 mt-1">
+              ✅ Whole amount valid
+            </div>
+          )}
+        </>
+      )}
     </label>
-    <button onClick={onBuy} disabled={!account} className="px-4 py-2 rounded-xl bg-black text-white disabled:opacity-50">
-      {account ? "Buy" : "Connect first"}
+
+    <button
+      type="submit"
+      disabled={!account || !ethAmount || !amountValid}
+      className="px-4 py-2 rounded-xl bg-black text-white disabled:opacity-50"
+    >
+      {!account
+        ? "Connect first"
+        : !ethAmount
+          ? "Enter amount"
+          : amountValid
+            ? "✅ Valid — Buy"
+            : "⚠️ Use whole-token amount"}
     </button>
-  </div>
+  </form>
+
   {txStatus && <div className="mt-2 text-sm text-green-600">{txStatus}</div>}
 </section>
+
 
 
 {/*
