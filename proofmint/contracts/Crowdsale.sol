@@ -13,7 +13,7 @@ interface IReceiptNFT {
 }
 
 contract Crowdsale is ReentrancyGuard {
-    IToken   public immutable token;
+    IToken public immutable token;
     IReceiptNFT public immutable receiptNFT;
 
     address  public immutable owner;
@@ -23,6 +23,7 @@ contract Crowdsale is ReentrancyGuard {
 
     event TokensPurchased(address indexed buyer, uint256 value, uint256 amount);
     event Withdrawn(address indexed to, uint256 value);
+    event ReceiptMinted(address indexed to, uint256 indexed tokenId, uint256 paidWei, uint256 tokensOut);
 
     modifier onlyOwner() {
         require(msg.sender == owner, "not owner");
@@ -48,9 +49,9 @@ contract Crowdsale is ReentrancyGuard {
     }
 
     function buyTokens() public payable nonReentrant {
-        _buy(msg.sender, msg.value);
-        // mint receipt NFT
-        receiptNFT.mintTo(msg.sender);
+        uint256 tokens = _buy(msg.sender, msg.value);       // effects first
+        uint256 tokenId = receiptNFT.mintTo(msg.sender);    // then external call (guarded by nonReentrant)
+        emit ReceiptMinted(msg.sender, tokenId, msg.value, tokens);
     }
 
     function withdraw() external nonReentrant onlyOwner {
@@ -60,11 +61,11 @@ contract Crowdsale is ReentrancyGuard {
         emit Withdrawn(owner, amt);
     }
 
-    function _buy(address beneficiary, uint256 weiAmount) internal {
+    function _buy(address beneficiary, uint256 weiAmount) internal returns (uint256 tokens) {
         require(weiAmount > 0, "no ETH sent");
         require(weiRaised + weiAmount <= cap, "cap reached");
 
-        uint256 tokens = (weiAmount * rate) / 1e18;
+        tokens = (weiAmount * rate) / 1e18;
 
         weiRaised += weiAmount;
         token.mint(beneficiary, tokens);

@@ -104,6 +104,20 @@ Default (uses deployer account)
 npm run buy:sepolia
 ```
 
+## Sepolia Deployments
+
+- **Token**: `0x9712820E18e5f2B8cBe3da25f31b8f2F8c8576bF`
+- **ProofNFT**: `0x027d8BC849Ab534892397ed09C9e83c2D11295fd`
+- **Crowdsale**: `0x4F7d38A72349c96d6681D34fd1cabAcA7B73EDEA` (verified)
+
+### Crowdsale
+- **Rate**: 1000 tokens / 1 ETH
+- **Cap**: 10 ETH total
+- **Receipts**: Mints **one NFT per purchase** (`ReceiptMinted(to, tokenId, paidWei, tokensOut)`)
+- **Buy**: send ETH to the Crowdsale contract or call `buyTokens()`
+- **Withdraw**: `onlyOwner` can withdraw raised ETH
+
+
 License
 
 MIT © 2025 Proofmint Contributors

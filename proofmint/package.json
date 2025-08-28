@@ -3,7 +3,9 @@
   "version": "1.0.0",
   "main": "index.js",
   "private": true,
-  "workspaces": ["proofmint-frontend"],
+  "workspaces": [
+    "proofmint-frontend"
+  ],
   "description": "",
   "keywords": [],
   "author": "",
@@ -11,15 +13,21 @@
   "scripts": {
     "compile": "hardhat compile",
     "test": "hardhat test",
+    "test:file": "hardhat test",
+    "test:changed": "bash -lc 'FILES=$(git diff --name-only --diff-filter=ACMRTUXB HEAD~1 | grep -E \"^test/.*\\.ts$\") ; if [ -z \"$FILES\" ]; then echo \"No changed test files — running full suite\" ; npx hardhat test ; else echo \"Running changed tests:\" $FILES ; npx hardhat test $FILES ; fi'",
     "coverage": "hardhat coverage",
-    "deploy:sepolia": "hardhat run scripts/deploy.js --network sepolia",
-    "verify:sepolia": "node scripts/verify-sepolia.js",
-    "buy:sepolia": "hardhat run scripts/buy.js --network sepolia",
-    "withdraw:sepolia": "hardhat run scripts/withdraw.js --network sepolia",
+    "verify:sepolia": "hardhat verify --network sepolia",
+    "buy:sepolia": "hardhat run scripts/buy.ts --network sepolia",
+    "withdraw:sepolia": "hardhat run scripts/withdraw.ts --network sepolia",
     "dev:ui": "npm -w proofmint-frontend run dev",
     "build:ui": "npm -w proofmint-frontend run build",
     "preview:ui": "npm -w proofmint-frontend run preview",
-    "test:contracts": "hardhat test"
+    "test:contracts": "hardhat test",
+    "node:hh": "hardhat node",
+    "node:anvil": "anvil",
+    "deploy:local":   "node -r ts-node/register/transpile-only -r tsconfig-paths/register node_modules/.bin/hardhat run scripts/deploy/03_deploy_crowdsale.ts --network localhost",
+    "deploy:anvil":   "node -r ts-node/register/transpile-only -r tsconfig-paths/register node_modules/.bin/hardhat run scripts/deploy/03_deploy_crowdsale.ts --network anvil",
+    "deploy:sepolia": "node -r ts-node/register/transpile-only -r tsconfig-paths/register node_modules/.bin/hardhat run scripts/deploy/03_deploy_crowdsale.ts --network sepolia"
   },
   "devDependencies": {
     "@nomicfoundation/hardhat-toolbox": "^6.1.0",
@@ -31,6 +39,7 @@
     "hardhat": "^2.26.3",
     "solidity-coverage": "^0.8.16",
     "ts-node": "^10.9.2",
+    "tsconfig-paths": "^4.2.0",
     "typechain": "^8.3.2",
     "typescript": "^5.9.2"
   },
