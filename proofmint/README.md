@@ -26,12 +26,20 @@ npm install
 npx hardhat compile
 npx hardhat test
 ```
+
+## Deploy & Verify (one liner)
+
+Deploy contracts to Sepolia and run verification automatically:
+```bash
+npx hardhat run scripts/deploy/03_deploy_crowdsale.ts --network sepolia && npm run verify:sepolia:ts
+```
+
 ## Networks & Deployments (Sepolia)  
  > These parameters apply to the Sepolia deployment above.
 ```
-Crowdsale: 0xF7DC27b66fa34Dbbd1369aF2e5aD5bcF20Fcf1b5
-ProofNFT : 0x595492ABfFf082596583715f0a568811368AFfbE
-Token : 0x9712820E18e5f2B8cBe3da25f31b8f2F8c8576bF
+Crowdsale: 0x4e0B4b8a62De3699634D9f0A53F87B74019eF636
+ProofNFT : 0x8583219aDd5958C2aCE04748a87B61448941B82b
+Token    : 0x9712820E18e5f2B8cBe3da25f31b8f2F8c8576bF
 ```
 ## Tasks & Scripts
 
