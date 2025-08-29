@@ -41,6 +41,7 @@ Crowdsale: 0x4e0B4b8a62De3699634D9f0A53F87B74019eF636
 ProofNFT : 0x8583219aDd5958C2aCE04748a87B61448941B82b
 Token    : 0x9712820E18e5f2B8cBe3da25f31b8f2F8c8576bF
 ```
+
 ## Tasks & Scripts
 
 **TypeScript helpers:**
@@ -79,11 +80,11 @@ npx hardhat clean
 ```
 
 ## Buy Tokens (Sepolia)
-You can purchase tokens from the deployed Crowdsale using a simple script (no frontend required).
-
-Default (uses deployer account)
+Use the TypeScript helper (no frontend required):
 ```bash
-npm run buy:sepolia
+npm run buy:sepolia:ts
+# override amount:
+ETH=0.01 npm run buy:sepolia:ts
 ```
 
 ## Withdraw Raised ETH (Owner Only):
@@ -92,8 +93,8 @@ Withdraws all ETH in the Crowdsale to the owner account.
 # Uses deployments/latest.json for the crowdsale address
 npm run withdraw:sepolia
 
-# Or override with a specific address
-CROWDSALE_ADDR=0xCFCdAb4566285Ee54650E3B7877f740b83aE8Fcf npm run withdraw:sepolia
+# override crowdsale address if needed (use a full 0x… address):
+CROWDSALE_ADDR=0x4e0B4b8a62De3699634D9f0A53F87B74019eF636 npm run withdraw:sepolia:ts
 ```
 
 **Verify contracts (TypeScript helper):**
@@ -121,7 +122,7 @@ tasks/               # Custom Hardhat tasks (TS)
 ```
 
 ## Crowdsale Parameters
-- **Rate**: 1000 tokens / 1 ETH
+- **Rate**: 1000 tokens / 1 ETH (scaled to 1e18)
 - **Cap**: 10 ETH total
 - **Receipts**: Mints **one NFT per purchase** (`ReceiptMinted(to, tokenId, paidWei, tokensOut)`)
 - **Buy**: send ETH to the Crowdsale contract or call `buyTokens()`
