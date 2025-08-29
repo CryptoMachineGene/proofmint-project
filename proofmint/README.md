@@ -27,7 +27,7 @@ npx hardhat compile
 npx hardhat test
 ```
 ## Networks & Deployments (Sepolia)  
- > “These parameters apply to the Sepolia deployment above.”
+ > These parameters apply to the Sepolia deployment above.
 ```
 Crowdsale: 0xF7DC27b66fa34Dbbd1369aF2e5aD5bcF20Fcf1b5
 ProofNFT : 0x595492ABfFf082596583715f0a568811368AFfbE
@@ -35,6 +35,14 @@ Token : 0x9712820E18e5f2B8cBe3da25f31b8f2F8c8576bF
 ```
 ## Tasks & Scripts
 
+**TypeScript helpers:**
+```bash
+npm run buy:sepolia:ts           # buy (default 0.001 ETH)
+ETH=0.01 npm run buy:sepolia:ts  # override amount
+
+npm run withdraw:sepolia:ts      # owner-only withdraw
+CROWDSALE_ADDR=0x... npm run withdraw:sepolia:ts
+```
 **Crowdsale info:**
 ```bash
 npx hardhat crowdsale:info --network sepolia --sale <SALE_ADDR>
@@ -80,6 +88,11 @@ npm run withdraw:sepolia
 CROWDSALE_ADDR=0xCFCdAb4566285Ee54650E3B7877f740b83aE8Fcf npm run withdraw:sepolia
 ```
 
+**Verify contracts (TypeScript helper):**
+```bash
+npm run verify:sepolia:ts         # verify Token, ProofNFT, and Crowdsale from deployments/sepolia.json
+```
+
 ## Project Structure
 ```bash
 contracts/           # Solidity smart contracts
@@ -105,6 +118,15 @@ tasks/               # Custom Hardhat tasks (TS)
 - **Receipts**: Mints **one NFT per purchase** (`ReceiptMinted(to, tokenId, paidWei, tokensOut)`)
 - **Buy**: send ETH to the Crowdsale contract or call `buyTokens()`
 - **Withdraw**: `onlyOwner` can withdraw raised ETH
+
+
+<details>
+<summary>Developer Tips</summary>
+
+- Amount override: `ETH=0.05 npm run buy:sepolia:ts`  
+- Address override: `SALE_ADDR=0x... npm run buy:sepolia:ts`  
+- Keep `solcover.js` as-is; it’s the expected format for `hardhat-coverage`.
+</details>
 
 
 ## License
