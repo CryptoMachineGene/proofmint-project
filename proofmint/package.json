@@ -27,7 +27,10 @@
     "node:anvil": "anvil",
     "deploy:local":   "node -r ts-node/register/transpile-only -r tsconfig-paths/register node_modules/.bin/hardhat run scripts/deploy/03_deploy_crowdsale.ts --network localhost",
     "deploy:anvil":   "node -r ts-node/register/transpile-only -r tsconfig-paths/register node_modules/.bin/hardhat run scripts/deploy/03_deploy_crowdsale.ts --network anvil",
-    "deploy:sepolia": "node -r ts-node/register/transpile-only -r tsconfig-paths/register node_modules/.bin/hardhat run scripts/deploy/03_deploy_crowdsale.ts --network sepolia"
+    "deploy:sepolia": "node -r ts-node/register/transpile-only -r tsconfig-paths/register node_modules/.bin/hardhat run scripts/deploy/03_deploy_crowdsale.ts --network sepolia",
+    "show:sepolia": "jq -r 'to_entries[] | \"\\(.key): \\(.value)\"' deployments/sepolia.json",
+    "buy:sepolia:ts": "hardhat run scripts/buy.ts --network sepolia",
+    "withdraw:sepolia:ts": "hardhat run scripts/withdraw.ts --network sepolia"
   },
   "devDependencies": {
     "@nomicfoundation/hardhat-toolbox": "^6.1.0",
