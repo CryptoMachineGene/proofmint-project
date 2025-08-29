@@ -28,3 +28,15 @@ ignition/deployments/chain-31337
 # OS cruft
 .DS_Store
 Thumbs.db
+# Hardhat build artifacts
+/artifacts/
+/cache/
+/typechain-types/
+
+# Coverage
+/coverage/
+
+# Env & local
+.env
+.env.*
+deployments/latest.json
