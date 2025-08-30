@@ -1,4 +1,3 @@
-// scripts/withdraw.ts
 import { ethers, network } from "hardhat";
 import fs from "fs";
 import path from "path";
@@ -13,7 +12,10 @@ function loadAddress(name: string, net: string): string {
   const json = JSON.parse(fs.readFileSync(file, "utf8")) as DeployMap;
   const addr = process.env.CROWDSALE_ADDR || json[name];
   if (!addr) throw new Error(`Missing ${name} address in ${file} (or CROWDSALE_ADDR env var)`);
-  return addr;
+  if (!ethers.isAddress(addr)) {
+    throw new Error(`Invalid ${name} address: "${addr}". Use a full 0x… address or remove CROWDSALE_ADDR to use ${file}.`);
+  }
+  return ethers.getAddress(addr); // checksummed
 }
 
 async function main() {
