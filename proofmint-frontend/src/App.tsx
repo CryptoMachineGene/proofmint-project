@@ -1,61 +1,37 @@
-import { useEffect, useState } from "react";
-import ConnectButton from "./components/ConnectButton";
+import { useState } from "react";
+import type { Signer } from "ethers";
+import ConnectButtons from "./components/ConnectButtons";
 import BuyForm from "./components/BuyForm";
 import StatePanel from "./components/StatePanel";
-import WithdrawButton from "./components/WithdrawButton"; // optional
-import { readDashboard, usingFallbackRPC } from "./lib/eth";
-import "./App.css";
-
-interface Dash {
-  rate: string;
-  capEth: string;
-  raisedEth: string;
-  nftsMinted: string;
-}
 
 export default function App() {
-  const [connected, setConnected] = useState<boolean>(false);
-  const [dash, setDash] = useState<Dash | null>(null);
-  const [refreshing, setRefreshing] = useState<boolean>(false);
+  const [signer, setSigner] = useState<Signer | null>(null);
+  const [who, setWho] = useState<string>("");
+  const [via, setVia] = useState<"Injected" | "WalletConnect" | null>(null);
 
-  async function refresh() {
-    setRefreshing(true);
-    try {
-      const d = await readDashboard();
-      setDash(d);
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setRefreshing(false);
-    }
+  async function onConnected(s: Signer, label: "Injected" | "WalletConnect") {
+    setSigner(s);
+    setVia(label);
+    const addr = await s.getAddress();
+    setWho(addr);
   }
 
-  useEffect(() => {
-    void refresh();
-  }, []);
-
   return (
-    <div className="min-h-screen bg-gray-100 p-6">
-      <div className="max-w-2xl mx-auto space-y-6">
-        <header className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold">
-            Proofmint{" "}
-            <span className="text-xs font-normal text-gray-500 align-middle">
-              {usingFallbackRPC() ? "Read-only via RPC" : "Wallet-connected"}
-            </span>
-          </h1>
-          <ConnectButton onConnected={() => setConnected(true)} />
-        </header>
+    <main className="max-w-2xl mx-auto p-6">
+      <header className="mb-6">
+        <h1 className="text-2xl font-bold">Proofmint</h1>
+        {who ? (
+          <p className="text-sm text-gray-600 break-all">
+            Connected ({via}): <span className="font-mono">{who}</span>
+          </p>
+        ) : (
+          <p className="text-sm text-gray-600">Not connected</p>
+        )}
+      </header>
 
-        <StatePanel data={dash} onRefresh={refresh} refreshing={refreshing} />
-        <BuyForm disabled={!connected} rate={dash?.rate} />
-
-        {/* Owner section is optional, handy for demo */}
-        <div className="bg-white rounded-2xl shadow p-5">
-          <h2 className="text-lg font-semibold mb-3">Owner Actions</h2>
-          <WithdrawButton />
-        </div>
-      </div>
-    </div>
+      <ConnectButtons onConnected={onConnected} />
+      <BuyForm signer={signer} />
+      <StatePanel />
+    </main>
   );
 }

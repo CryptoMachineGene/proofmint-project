@@ -1,117 +1,119 @@
-// proofmint-frontend/src/lib/eth.ts
+import { ethers } from "ethers";
+import EthereumProvider from "@walletconnect/ethereum-provider";
 import {
-  BrowserProvider,
-  Contract,
-  JsonRpcProvider,
-  JsonRpcSigner,
-  parseEther,
-  formatEther,
-  type Provider
-} from "ethers";
-import CrowdsaleABI from "./abis/Crowdsale.json";
-import ProofNFTABI from "./abis/ProofNFT.json";
-import { CROWDSALE_ADDR, NFT_ADDR, CHAIN_ID_HEX } from "../config";
+  CHAIN_ID, CHAIN_ID_HEX_STR,
+  CROWDSALE_ADDR, NFT_ADDR, FALLBACK_RPC, WC_PROJECT_ID
+} from "../config";
 
-const FALLBACK_RPC: string | undefined = import.meta.env.VITE_FALLBACK_RPC;
+// ABIs (adjust if your function names differ)
+const CROWDSALE_ABI = [
+  "function buy() payable",
+  "function rate() view returns (uint256)",
+  "function cap() view returns (uint256)",
+  "function weiRaised() view returns (uint256)",
+];
+const NFT_ABI = [
+  "function totalSupply() view returns (uint256)",
+];
 
-// ───────────────────────────────────────────────────────────────────────────────
-// Provider helpers
-// ───────────────────────────────────────────────────────────────────────────────
-function hasWallet(): boolean {
-  return !!(window as any).ethereum;
-}
+export type WalletKind = "Injected" | "WalletConnect";
 
-// Read provider: wallet if present (so it auto-updates on chain change), otherwise fallback RPC
-export function getReadProvider(): Provider {
-  if (hasWallet()) {
-    return new BrowserProvider((window as any).ethereum);
+let injectedProvider: ethers.BrowserProvider | null = null;
+let wcProvider: any | null = null;
+let wcEthersProvider: ethers.BrowserProvider | null = null;
+
+// read-only provider if no wallet
+const readonlyProvider: ethers.AbstractProvider | null =
+  FALLBACK_RPC ? new ethers.JsonRpcProvider(FALLBACK_RPC, CHAIN_ID) : null;
+
+export const hasInjected = () =>
+  typeof window !== "undefined" && (window as any).ethereum;
+
+export async function connectInjected(): Promise<ethers.Signer> {
+  if (!hasInjected()) throw new Error("No injected wallet found.");
+  injectedProvider = new ethers.BrowserProvider((window as any).ethereum);
+  await injectedProvider.send("eth_requestAccounts", []);
+  const net = await injectedProvider.getNetwork();
+  if (Number(net.chainId) !== CHAIN_ID) {
+    await (window as any).ethereum.request({
+      method: "wallet_switchEthereumChain",
+      params: [{ chainId: CHAIN_ID_HEX_STR }],
+    });
   }
-  if (!FALLBACK_RPC) {
-    throw new Error("Missing VITE_FALLBACK_RPC for read-only mode");
+  return injectedProvider.getSigner();
+}
+
+export async function connectWalletConnect(): Promise<ethers.Signer> {
+  if (!WC_PROJECT_ID) throw new Error("Missing WalletConnect project id.");
+  if (!wcProvider) {
+    wcProvider = await EthereumProvider.init({
+      projectId: WC_PROJECT_ID,
+      chains: [CHAIN_ID],
+      optionalChains: [CHAIN_ID],
+      showQrModal: true,
+      metadata: {
+        name: "Proofmint",
+        description: "Proofmint dApp",
+        url: "https://example.org",
+        icons: [],
+      },
+    });
   }
-  return new JsonRpcProvider(FALLBACK_RPC);
+  await wcProvider.enable();
+  wcEthersProvider = new ethers.BrowserProvider(wcProvider);
+  return wcEthersProvider.getSigner();
 }
 
-// Wallet provider: requires injected wallet
-export async function getWalletProvider(): Promise<BrowserProvider> {
-  if (!hasWallet()) throw new Error("No injected wallet found");
-  return new BrowserProvider((window as any).ethereum);
+function pickProvider(p?: ethers.Signer | ethers.Provider) {
+  if (p) return p;
+  if (injectedProvider) return injectedProvider;
+  if (wcEthersProvider) return wcEthersProvider;
+  if (readonlyProvider) return readonlyProvider;
+  throw new Error("No provider available (connect a wallet or set VITE_FALLBACK_RPC).");
 }
 
-export async function getSigner(): Promise<JsonRpcSigner> {
-  const provider = await getWalletProvider();
-  await provider.send("eth_requestAccounts", []);
-  return provider.getSigner();
+export async function getCrowdsaleContract(p?: ethers.Signer | ethers.Provider) {
+  if (!CROWDSALE_ADDR) throw new Error("Crowdsale address not set.");
+  return new ethers.Contract(CROWDSALE_ADDR, CROWDSALE_ABI, pickProvider(p));
 }
 
-// Network guard only when a wallet is present (no-op on fallback)
-export async function ensureNetwork(): Promise<void> {
-  if (!hasWallet()) return; // can't switch networks without a wallet
-  const provider = await getWalletProvider();
-  const net = await provider.getNetwork();
-  const current = "0x" + BigInt(net.chainId).toString(16);
-  if (current.toLowerCase() !== String(CHAIN_ID_HEX).toLowerCase()) {
-    await provider.send("wallet_switchEthereumChain", [{ chainId: CHAIN_ID_HEX }]);
-  }
+export async function getNftContract(p?: ethers.Signer | ethers.Provider) {
+  if (!NFT_ADDR) throw new Error("NFT address not set.");
+  return new ethers.Contract(NFT_ADDR, NFT_ABI, pickProvider(p));
 }
 
-// Optional: UI can call this to show “Reading from Infura RPC” until a wallet connects
-export function usingFallbackRPC(): boolean {
-  return !hasWallet();
-}
-
-// ───────────────────────────────────────────────────────────────────────────────
-// Contracts
-// ───────────────────────────────────────────────────────────────────────────────
-export function crowdsaleRead(provider: Provider) {
-  return new Contract(CROWDSALE_ADDR, CrowdsaleABI as any, provider);
-}
-
-export async function crowdsaleWrite() {
-  const signer = await getSigner();
-  return new Contract(CROWDSALE_ADDR, CrowdsaleABI as any, signer);
-}
-
-export function proofNftRead(provider: Provider) {
-  return new Contract(NFT_ADDR, ProofNFTABI as any, provider);
-}
-
-// ───────────────────────────────────────────────────────────────────────────────
-// Actions (aligned to your Solidity)
-// ───────────────────────────────────────────────────────────────────────────────
-export async function buyTokens(ethAmount: string) {
-  await ensureNetwork();
-  const sale = await crowdsaleWrite();
-  const tx = await sale.buyTokens({ value: parseEther(ethAmount) });
+export async function buyTokens(ethAmount: string, signer?: ethers.Signer) {
+  if (!signer) throw new Error("No signer connected.");
+  const sale = await getCrowdsaleContract(signer);
+  const value = ethers.parseEther(ethAmount);
+  const tx = await sale.buy({ value });
   return tx.wait();
 }
 
-export async function withdrawOwner() {
-  await ensureNetwork();
-  const sale = await crowdsaleWrite();
-  const tx = await sale.withdraw();
-  return tx.wait();
-}
+export async function readState() {
+  const sale = await getCrowdsaleContract();
+  const nft = await getNftContract();
 
-// ───────────────────────────────────────────────────────────────────────────────
-// Dashboard (pre-wallet reads via fallback RPC)
-// ───────────────────────────────────────────────────────────────────────────────
-export async function readDashboard() {
-  const provider = getReadProvider();
-  const sale = crowdsaleRead(provider);
-  const nft = proofNftRead(provider);
-
-  const [rateBn, capWei, raisedWei, nftTotal] = await Promise.all([
-    sale.rate(),        // tokens per 1 ETH
-    sale.cap(),         // max wei to raise
-    sale.weiRaised(),   // total wei raised
-    nft.totalSupply(),  // minted receipts
+  const [rate, cap, weiRaised, totalSupply] = await Promise.all([
+    sale.rate(),
+    sale.cap(),
+    sale.weiRaised(),
+    nft.totalSupply(),
   ]);
 
+  const capWei = BigInt(cap.toString());
+  const raised = BigInt(weiRaised.toString());
+  const remaining = capWei > raised ? (capWei - raised) : 0n;
+
   return {
-    rate: rateBn.toString(),
-    capEth: Number.parseFloat(formatEther(capWei)).toFixed(4),
-    raisedEth: Number.parseFloat(formatEther(raisedWei)).toFixed(4),
-    nftsMinted: nftTotal.toString(),
+    rate: rate.toString(),
+    cap: capWei.toString(),
+    weiRaised: raised.toString(),
+    nftsMinted: totalSupply.toString(),
+    capRemainingWei: remaining.toString(),
   };
 }
+
+// (Optional) backwards-compat for older imports
+export const usingFallbackRPC = !!FALLBACK_RPC;
+export async function readDashboard() { return readState(); }
