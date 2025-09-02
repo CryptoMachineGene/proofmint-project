@@ -28,3 +28,5 @@ dist-ssr
 proofmint-frontend/.env.local
 proofmint-frontend/node_modules
 proofmint-frontend/dist
+.env.local
+.env.local

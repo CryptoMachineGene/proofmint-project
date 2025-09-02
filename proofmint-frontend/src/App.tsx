@@ -12,8 +12,7 @@ export default function App() {
   async function onConnected(s: Signer, label: "Injected" | "WalletConnect") {
     setSigner(s);
     setVia(label);
-    const addr = await s.getAddress();
-    setWho(addr);
+    setWho(await s.getAddress());
   }
 
   return (
@@ -21,12 +20,8 @@ export default function App() {
       <header className="mb-6">
         <h1 className="text-2xl font-bold">Proofmint</h1>
         {who ? (
-          <p className="text-sm text-gray-600 break-all">
-            Connected ({via}): <span className="font-mono">{who}</span>
-          </p>
-        ) : (
-          <p className="text-sm text-gray-600">Not connected</p>
-        )}
+          <p className="text-sm text-gray-600 break-all">Connected ({via}): <span className="font-mono">{who}</span></p>
+        ) : <p className="text-sm text-gray-600">Not connected</p>}
       </header>
 
       <ConnectButtons onConnected={onConnected} />

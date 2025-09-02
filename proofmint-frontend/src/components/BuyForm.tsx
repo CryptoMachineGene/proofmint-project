@@ -1,82 +1,50 @@
-import { FormEvent, useMemo, useState } from "react";
-import { buyTokens } from "../lib/eth";
-import { parseEther, formatUnits } from "ethers";
+import { useState } from "react";
+import type { Signer } from "ethers";
+import { buyTokensSmart } from "../lib/eth";
+import Toast from "./ui/Toast";
 
-interface BuyFormProps {
-  disabled?: boolean;
-  rate?: string; // tokens per 1 ETH (uint256 as string)
-}
+type Props = { signer?: Signer | null };
 
-export default function BuyForm({ disabled, rate }: BuyFormProps) {
-  const [ethAmount, setEthAmount] = useState<string>("");
-  const [busy, setBusy] = useState<boolean>(false);
+export default function BuyForm({ signer }: Props) {
+  const [ethAmount, setEthAmount] = useState<string>("0.01");
+  const [busy, setBusy] = useState(false);
+  const [toast, setToast] = useState<{ kind: "success" | "error"; text: string } | null>(null);
 
-  // Preview tokens out, using the same math the contract uses.
-  const tokenPreview = useMemo(() => {
-    try {
-      if (!rate || !ethAmount) return "—";
-      const wei = parseEther(ethAmount);           // bigint
-      const rateBn = BigInt(rate);                 // tokens per 1 ETH (base units)
-      const tokensBase = (wei * rateBn) / 10n ** 18n; // base units (assume 18 decimals)
-      // Show 4 decimals for readability
-      return Number.parseFloat(formatUnits(tokensBase, 18)).toFixed(4);
-    } catch {
-      return "—";
-    }
-  }, [rate, ethAmount]);
+  const Spinner = () => <span className="inline-block h-4 w-4 border-2 border-current border-t-transparent rounded-full animate-spin align-[-2px] mr-2" />;
 
-  async function onBuy(e: FormEvent) {
-    e.preventDefault();
-    if (!ethAmount) return;
+  async function onBuy() {
     setBusy(true);
     try {
-      const receipt = await buyTokens(ethAmount);
-      console.log("Buy receipt:", receipt);
-      alert("Purchase confirmed ✅");
-      setEthAmount("");
+      if (!signer) throw new Error("Connect a wallet first.");
+      if (!ethAmount || Number(ethAmount) <= 0) throw new Error("Enter a positive amount.");
+      const receipt = await buyTokensSmart(ethAmount, signer);
+      const hash = (receipt as any)?.hash ?? (receipt as any)?.transactionHash ?? "";
+      setToast({ kind: "success", text: `Success! Tx ${String(hash).slice(0, 10)}…` });
     } catch (e: any) {
-      console.error(e);
-      alert(e?.info?.error?.message ?? e?.message ?? "Buy failed");
-    } finally {
-      setBusy(false);
-    }
+        const msg =
+          e?.shortMessage ||
+          e?.info?.error?.message ||
+          e?.cause?.reason ||
+          e?.message ||
+          String(e);
+        setToast({ kind: "error", text: msg });
+      } finally { setBusy(false); }
   }
 
   return (
-    <form onSubmit={onBuy} className="bg-white rounded-2xl shadow p-5">
+    <section className="bg-white rounded-2xl shadow p-5 mb-6">
       <h2 className="text-lg font-semibold mb-3">Buy Tokens</h2>
-
       <div className="flex items-end gap-3">
         <label className="flex-1">
           <div className="text-sm text-gray-600 mb-1">Amount (ETH)</div>
-          <input
-            value={ethAmount}
-            onChange={(e) => setEthAmount(e.target.value)}
-            type="number"
-            min="0"
-            step="0.0001"
-            placeholder="0.001"
-            className="w-full border rounded-xl px-3 py-2"
-          />
+          <input value={ethAmount} onChange={(e) => setEthAmount(e.target.value)} type="number" min="0" step="0.0001" placeholder="0.001" className="w-full border rounded-xl px-3 py-2" />
         </label>
-
-        <button
-          type="submit"
-          disabled={busy || !!disabled || !ethAmount}
-          className="px-4 py-2 rounded-2xl shadow bg-indigo-600 text-white disabled:opacity-50"
-        >
-          {busy ? "Buying…" : "Buy"}
+        <button onClick={onBuy} disabled={busy || !signer} className="px-4 py-2 rounded-xl shadow border disabled:opacity-50">
+          {busy && <Spinner />}Buy
         </button>
       </div>
-
-      <div className="mt-3 text-sm text-gray-600 flex items-center justify-between">
-        <span>Preview (≈ tokens received)</span>
-        <span className="font-mono font-semibold text-right">{tokenPreview}</span>
-      </div>
-
-      <p className="text-xs text-gray-500 mt-2">
-        Sends ETH to the crowdsale; you’ll receive tokens and the receipt NFT.
-      </p>
-    </form>
+      {!signer && <p className="text-sm text-gray-500 mt-2">Connect a wallet to enable buying.</p>}
+      {toast && <Toast kind={toast.kind} text={toast.text} onClose={() => setToast(null)} />}
+    </section>
   );
 }
