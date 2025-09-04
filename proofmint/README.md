@@ -1,4 +1,7 @@
 # Proofmint
+![Status](https://img.shields.io/badge/status-WIP-yellow)
+![Frontend](https://img.shields.io/badge/frontend-React%20%2B%20Vite-lightblue)
+![Chain](https://img.shields.io/badge/network-Sepolia-purple)
 
 [![Hardhat](https://img.shields.io/badge/Built%20with-Hardhat-blue)](https://hardhat.org/)
 [![Solidity](https://img.shields.io/badge/Solidity-0.8.x-purple)](https://docs.soliditylang.org/)
