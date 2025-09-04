@@ -1,36 +1,40 @@
-## Summary
-<!-- One-liner: what this PR does -->
+## Summary  
+<!-- One-liner: what this PR does -->  
 
-## What’s changed
-- 
+## Type  
+<!-- Pick one -->  
+- [ ] feat (new feature)  
+- [ ] fix (bug fix)  
+- [ ] docs (documentation only)  
+- [ ] refactor (no behavior change)  
+- [ ] ci (build / pipelines)  
+- [ ] chore (deps / tooling)  
+- [ ] perf (performance)  
+- [ ] test (tests only)  
 
-## Why
-- 
+## What's changed  
+-  
 
-## How to test
-1. 
-2. 
+## Why  
+-  
 
-## Screenshots / Logs (if UI)
-<details>
-<summary>Expand</summary>
+## How to test  
+1.  
+2.  
 
-</details>
+## Screenshots / Logs (if UI)  
+<details>  
+<summary>Expand</summary>  
 
-## Deployment / Config
-- [ ] No config changes
-- [ ] Environment variables (documented below)
+</details>  
 
-> ENV notes:
+## Risks & Rollback  
+- **Risk Level:** low / medium / high  
+- **Rollback plan:** steps to revert if needed (e.g., `git revert <sha>`, disable feature flag)  
 
-
-## Checklist
-- [ ] Title uses conventional commits (e.g. `feat:`, `fix:`, `docs:`, `ci:`)
-- [ ] PR targets `main`
-- [ ] Linked issue (if any): Closes #
-- [ ] Tests pass in CI
-- [ ] Updated docs/README where helpful
-- [ ] No secrets or keys committed
-
-## Notes for reviewers
-- 
+## Deployment / Config  
+- [ ] No config changes  
+- [ ] Env vars (document below)  
+- [ ] Data migration  
+- [ ] Contract deploy / verify  
+- Notes:  
