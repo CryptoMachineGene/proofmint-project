@@ -1,6 +1,17 @@
 ## Summary
 <!-- One-liner: what this PR does -->
 
+## Type
+<!-- Pick one -->
+- [ ] feat (new feature)
+- [ ] fix (bug fix)
+- [ ] docs (documentation only)
+- [ ] refactor (no behavior change)
+- [ ] ci (build / pipelines)
+- [ ] chore (deps / tooling)
+- [ ] perf (performance)
+- [ ] test (tests only)
+
 ## What’s changed
 - 
 
@@ -11,26 +22,31 @@
 1. 
 2. 
 
-## Screenshots / Logs (if UI)
+## Screenshots / Logs
 <details>
 <summary>Expand</summary>
 
 </details>
 
+## Risks & Rollback
+- **Risk level:** low / medium / high
+- **Rollback plan:** steps to revert if needed (e.g., `git revert <sha>`, disable feature flag)
+
 ## Deployment / Config
 - [ ] No config changes
-- [ ] Environment variables (documented below)
+- [ ] Env vars (document below)
+- [ ] Data migration
+- [ ] Contract deploy / verify
+> Notes:
 
-> ENV notes:
-
+## Linked items
+- Closes #  
+- Relates to #  
 
 ## Checklist
-- [ ] Title uses conventional commits (e.g. `feat:`, `fix:`, `docs:`, `ci:`)
-- [ ] PR targets `main`
-- [ ] Linked issue (if any): Closes #
-- [ ] Tests pass in CI
-- [ ] Updated docs/README where helpful
-- [ ] No secrets or keys committed
-
-## Notes for reviewers
-- 
+- [ ] Conventional-commit title (e.g., `feat(frontend): …`)
+- [ ] Branch up to date with `main`
+- [ ] CI green
+- [ ] Added/updated tests (if applicable)
+- [ ] Updated docs/README (if helpful)
+- [ ] No secrets/keys committed
