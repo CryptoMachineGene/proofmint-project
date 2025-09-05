@@ -27,6 +27,10 @@ export default function App() {
       <ConnectButtons onConnected={onConnected} />
       <BuyForm signer={signer} />
       <StatePanel />
+      <footer style={{ marginTop: "2rem", fontSize: "0.9em", color: "#666" }}>
+        🚀 Proofmint frontend running — dev build active
+      </footer>
+
     </main>
   );
 }
