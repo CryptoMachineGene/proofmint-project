@@ -1,5 +1,7 @@
 # Proofmint Project
 
+![Status](https://img.shields.io/badge/Status-In%20Progress-orange.svg)
+
 A full-stack dApp featuring a token crowdsale with optional NFT receipts.  
 Built as part of the Dapp University Blockchain Developer Mentorship.
 
