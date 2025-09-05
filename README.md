@@ -21,6 +21,10 @@ Built as part of the Dapp University Blockchain Developer Mentorship.
 
 ---
 
+## Dev Notes
+- Frontend runs on [http://localhost:5173](http://localhost:5173) with Vite.
+- Connect wallet → Buy tokens → Refresh sale state.
+
 
 ## Features
 - Crowdsale contract where users can buy tokens with ETH
