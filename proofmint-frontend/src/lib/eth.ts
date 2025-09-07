@@ -5,11 +5,8 @@ import {
   CROWDSALE_ADDR, NFT_ADDR, FALLBACK_RPC, WC_PROJECT_ID
 } from "../config";
 
-import { ethers } from "ethers";
-// ... existing imports
-
 // NFT mint count via logs
-const NFT_DEPLOY_BLOCK = 9007802;
+const NFT_DEPLOY_BLOCK = 9007802n;
 
 const TRANSFER_TOPIC = ethers.id("Transfer(address,address,uint256)");
 const ZERO_ADDR = "0x0000000000000000000000000000000000000000";
@@ -205,9 +202,15 @@ export async function readState() {
   // minted via logs (fallback that works even if totalSupply() reverts)
   let mintedBI: bigint | null = null;
   try {
-    
-  } catch {
-    mintedBI = null;
+    const ts = await nft.totalSupply();
+    mintedBI = BigInt(ts.toString());
+  } catch (e1) {
+    try {
+      mintedBI = await mintedViaLogs();
+    } catch (e2) {
+      console.warn("minted read failed (logs + totalSupply):", e1, e2);
+      mintedBI = null;
+    }
   }
 
   const capWei = BigInt(cap.toString());
