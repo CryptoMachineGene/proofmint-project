@@ -14,9 +14,9 @@ const ZERO_ADDR = "0x0000000000000000000000000000000000000000";
 // count mints by querying Transfer(from=0x0, any to, any tokenId)
 async function mintedViaLogs(): Promise<bigint> {
   const provider =
-    injectedProvider ??
-    wcEthersProvider ??
-    (FALLBACK_RPC ? new ethers.JsonRpcProvider(FALLBACK_RPC, CHAIN_ID) : null);
+  injectedProvider ??
+  wcEthersProvider ??
+  getReadonly();
 
   if (!provider) throw new Error("No provider available for logs.");
 
@@ -36,7 +36,7 @@ async function mintedViaLogs(): Promise<bigint> {
     const logs = await (provider as any).getLogs(filter);
     return BigInt(logs.length);
   } catch (e: any) {
-    console.error("mintedViaLogs getLogs error:", e);  // <-- see exact reason in console
+    console.warn("mintedViaLogs: falling back to totalSupply()", e?.message ?? e);
     // last-resort fallback: try totalSupply() in case it actually works at runtime
     try {
       const nft = await getNftContract();
@@ -66,9 +66,19 @@ let injectedProvider: ethers.BrowserProvider | null = null;
 let wcProvider: any | null = null;
 let wcEthersProvider: ethers.BrowserProvider | null = null;
 
-// read-only provider if no wallet
-const readonlyProvider: ethers.AbstractProvider | null =
-  FALLBACK_RPC ? new ethers.JsonRpcProvider(FALLBACK_RPC, CHAIN_ID) : null;
+// read-only provider if no wallet (lazy)
+let _readonlyProvider: ethers.JsonRpcProvider | null = null;
+function getReadonly(): ethers.JsonRpcProvider | null {
+  if (!FALLBACK_RPC || !/^https?:\/\//i.test(FALLBACK_RPC)) return null;
+  if (!_readonlyProvider) {
+    try {
+      _readonlyProvider = new ethers.JsonRpcProvider(FALLBACK_RPC, CHAIN_ID);
+    } catch {
+      _readonlyProvider = null; // invalid / unreachable URL
+    }
+  }
+  return _readonlyProvider;
+}
 
 export const hasInjected = () =>
   typeof window !== "undefined" && (window as any).ethereum;
@@ -112,7 +122,9 @@ function pickProvider(p?: ethers.Signer | ethers.Provider) {
   if (p) return p;
   if (injectedProvider) return injectedProvider;
   if (wcEthersProvider) return wcEthersProvider;
-  if (readonlyProvider) return readonlyProvider;
+  const ro = getReadonly();
+  if (ro) return ro;
+
   throw new Error("No provider available (connect a wallet or set VITE_FALLBACK_RPC).");
 }
 
@@ -144,24 +156,28 @@ export async function buyTokensSmart(ethAmount: string, signer?: ethers.Signer) 
   const sale = await getCrowdsaleContract(signer);
   const value = ethers.parseEther(ethAmount);
 
-  // Try each candidate: first one whose estimateGas succeeds wins.
   for (const fn of BUY_FN_CANDIDATES) {
     try {
-      // skip if ABI doesn't expose it
-      if (typeof (sale as any)[fn] !== "function") continue;
-      // gas check (mimics the tx; will throw if it would revert)
-      if (sale.estimateGas && (sale.estimateGas as any)[fn]) {
-        await (sale.estimateGas as any)[fn]({ value });
+      const candidate = (sale as any)[fn];
+      if (typeof candidate !== "function") continue;
+
+      // Dry-run first: static call (no MetaMask prompt, no spammy "execution reverted")
+      if ((sale as any)[fn].staticCall) {
+        await (sale as any)[fn].staticCall({ value });
+      } else {
+        // ethers v6 canonical path
+        await sale.getFunction(fn).staticCall({ value });
       }
+
+      // If static call passed, send the real tx
       const tx = await (sale as any)[fn]({ value });
       return tx.wait();
-    } catch (e: any) {
-      // keep trying next candidate
-      // console.debug(`buy candidate ${fn} failed:`, bestErr(e));
+    } catch {
+      // Try next candidate silently
     }
   }
 
-  // Last resort: some contracts mint on plain ETH via receive() fallback.
+  // Last resort: payable receive()
   try {
     const tx = await signer.sendTransaction({ to: CROWDSALE_ADDR, value });
     return tx.wait();
@@ -211,7 +227,7 @@ export async function readState() {
       console.warn("minted read failed (logs + totalSupply):", e1, e2);
       mintedBI = null;
     }
-  }
+  } 
 
   const capWei = BigInt(cap.toString());
   const raisedWei = BigInt(weiRaised.toString());
