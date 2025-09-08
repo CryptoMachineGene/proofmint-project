@@ -6,48 +6,59 @@ import {
 } from "../config";
 
 // NFT mint count via logs
-const NFT_DEPLOY_BLOCK = 9007802n;
+const NFT_DEPLOY_BLOCK = 9007802;
 
 const TRANSFER_TOPIC = ethers.id("Transfer(address,address,uint256)");
 const ZERO_ADDR = "0x0000000000000000000000000000000000000000";
 
 // count mints by querying Transfer(from=0x0, any to, any tokenId)
+// count mints by querying Transfer(from=0x0, any to, any tokenId) in small block chunks
 async function mintedViaLogs(): Promise<bigint> {
   const provider =
-  injectedProvider ??
-  wcEthersProvider ??
-  getReadonly();
+    injectedProvider ??
+    wcEthersProvider ??
+    getReadonly();
 
   if (!provider) throw new Error("No provider available for logs.");
+  if (!NFT_ADDR) throw new Error("NFT address not set.");
 
-  const filter = {
-    address: NFT_ADDR,
-    fromBlock: NFT_DEPLOY_BLOCK,  // number is safest for browsers
-    toBlock: "latest",
-    topics: [
-      TRANSFER_TOPIC,
-      ethers.zeroPadValue(ZERO_ADDR, 32), // from = 0x0 ⇒ mint
-      null,                               // any "to"
-      null,                               // any tokenId
-    ],
-  } as any;
+  // keep chunks comfortably under free-tier limits
+  const STEP = 80; // blocks per query (tweak if needed)
 
-  try {
-    const logs = await (provider as any).getLogs(filter);
-    return BigInt(logs.length);
-  } catch (e: any) {
-    console.warn("mintedViaLogs: falling back to totalSupply()", e?.message ?? e);
-    // last-resort fallback: try totalSupply() in case it actually works at runtime
+  // v6 providers return number for getBlockNumber()
+  const latest = Number(await (provider as any).getBlockNumber?.() ?? 0);
+  const start  = Number(NFT_DEPLOY_BLOCK);
+
+  if (!Number.isFinite(latest) || latest <= 0 || latest < start) {
+    throw new Error(`Invalid block range for logs: start=${start}, latest=${latest}`);
+  }
+
+  let total = 0n;
+  const fromTopic = ethers.zeroPadValue(ZERO_ADDR, 32);
+
+  for (let from = start; from <= latest; from += STEP) {
+    const to = Math.min(from + STEP - 1, latest);
+
+    const filter = {
+      address: NFT_ADDR,
+      fromBlock: from,
+      toBlock: to,
+      topics: [TRANSFER_TOPIC, fromTopic, null, null],
+    } as any;
+
     try {
-      const nft = await getNftContract();
-      const ts = await nft.totalSupply();
-      return BigInt(ts.toString());
-    } catch (e2) {
-      console.error("fallback totalSupply() error:", e2);
-      throw e; // let caller show N/A
+      const logs = await (provider as any).getLogs(filter);
+      total += BigInt(logs.length);
+    } catch (e: any) {
+      // If a small window still fails, surface message and stop
+      console.warn(`mintedViaLogs: window ${from}-${to} failed:`, e?.message ?? e);
+      throw e;
     }
   }
+
+  return total;
 }
+
 
 // ABIs (adjust if your function names differ)
 const CROWDSALE_ABI = [
