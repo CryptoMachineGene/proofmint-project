@@ -15,9 +15,9 @@ const ZERO_ADDR = "0x0000000000000000000000000000000000000000";
 // count mints by querying Transfer(from=0x0, any to, any tokenId) in small block chunks
 async function mintedViaLogs(): Promise<bigint> {
   const provider =
+    getReadonly() ??
     injectedProvider ??
-    wcEthersProvider ??
-    getReadonly();
+    wcEthersProvider;
 
   if (!provider) throw new Error("No provider available for logs.");
   if (!NFT_ADDR) throw new Error("NFT address not set.");
@@ -79,6 +79,7 @@ let wcEthersProvider: ethers.BrowserProvider | null = null;
 
 // read-only provider if no wallet (lazy)
 let _readonlyProvider: ethers.JsonRpcProvider | null = null;
+
 function getReadonly(): ethers.JsonRpcProvider | null {
   if (!FALLBACK_RPC || !/^https?:\/\//i.test(FALLBACK_RPC)) return null;
   if (!_readonlyProvider) {
