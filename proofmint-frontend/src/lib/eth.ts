@@ -253,7 +253,7 @@ export async function readState() {
     capRemainingWei: remaining.toString(),
   };
 }
-
+}
 // (Optional) backwards-compat for older imports
 export const usingFallbackRPC = !!FALLBACK_RPC;
 export async function readDashboard() { return readState(); }
