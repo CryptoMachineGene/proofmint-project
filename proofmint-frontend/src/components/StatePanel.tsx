@@ -1,48 +1,50 @@
-import { useEffect, useState } from "react";
+import React from "react";
 import { readState } from "../lib/eth";
-import { formatEther } from "ethers";
-import Toast from "./ui/Toast";
-
-type View = { rate: string; cap: string; weiRaised: string; nftsMinted: string; capRemainingWei: string; };
 
 export default function StatePanel() {
-  const [busy, setBusy] = useState(false);
-  const [state, setState] = useState<View | null>(null);
-  const [toast, setToast] = useState<{ kind: "success" | "error"; text: string } | null>(null);
-
-  const Spinner = () => <span className="inline-block h-4 w-4 border-2 border-current border-t-transparent rounded-full animate-spin align-[-2px] mr-2" />;
+  const [state, setState] = React.useState<any>(null);
+  const [loading, setLoading] = React.useState(false);
+  const [err, setErr] = React.useState<string>("");
 
   async function refresh() {
-    setBusy(true);
+    setLoading(true);
+    setErr("");
     try {
       const s = await readState();
       setState(s);
-      setToast({ kind: "success", text: "State refreshed" });
     } catch (e: any) {
-      setToast({ kind: "error", text: e?.message ?? String(e) });
-    } finally { setBusy(false); }
+      console.error("readState failed:", e);
+      setErr(e?.message ?? String(e));
+      setState(null);
+    } finally {
+      setLoading(false);
+    }
   }
-  useEffect(() => { refresh(); }, []);
+
+  // auto load once
+  React.useEffect(() => { void refresh(); }, []);
 
   return (
-    <section className="bg-white rounded-2xl shadow p-5 mb-6">
-      <div className="flex items-center justify-between mb-3">
-        <h2 className="text-lg font-semibold">Sale State</h2>
-        <button onClick={refresh} disabled={busy} className="px-3 py-1.5 rounded-xl border shadow disabled:opacity-50">
-          {busy && <Spinner />}Refresh
-        </button>
-      </div>
-      {state ? (
-        <ul className="text-sm space-y-1">
-          <li><span className="font-medium">Tokens per ETH (rate):</span> {state.rate}</li>
-          <li>
-            <span className="font-medium">Cap remaining (ETH):</span>{" "}
-            {state.capRemainingWei !== "N/A" ? formatEther(state.capRemainingWei) : "N/A"}
-          </li>
-          <li><span className="font-medium">Total NFTs minted:</span> {state.nftsMinted}</li>
+    <section className="mt-6">
+      <h2 className="text-lg font-semibold mb-2">Sale State</h2>
+      <button
+        onClick={refresh}
+        disabled={loading}
+        className="px-3 py-1 bg-gray-200 rounded"
+      >
+        {loading ? "Loading…" : "Refresh"}
+      </button>
+
+      {err && <p className="text-red-600 mt-2">Error: {err}</p>}
+      {!state && !err && <p className="mt-2">No data yet.</p>}
+
+      {state && (
+        <ul className="mt-2 list-disc pl-5">
+          <li>Tokens per ETH (rate): {state.rate}</li>
+          <li>Cap remaining (ETH): {(BigInt(state.capRemainingWei) / 10n**18n).toString()}</li>
+          <li>Total NFTs minted: {state.nftsMinted}</li>
         </ul>
-      ) : <p className="text-sm text-gray-600">No data yet.</p>}
-      {toast && <Toast kind={toast.kind} text={toast.text} onClose={() => setToast(null)} />}
+      )}
     </section>
   );
 }
