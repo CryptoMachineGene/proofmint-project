@@ -12,23 +12,23 @@ const TRANSFER_TOPIC = ethers.id("Transfer(address,address,uint256)");
 const ZERO_ADDR = "0x0000000000000000000000000000000000000000";
 
 // count mints by querying Transfer(from=0x0, any to, any tokenId)
-// count mints by querying Transfer(from=0x0, any to, any tokenId) in small block chunks
+// robust: ≤10 block windows, auto-shrink on errors, gentle throttle
 async function mintedViaLogs(): Promise<bigint> {
   const provider =
-    getReadonly() ??
-    injectedProvider ??
+    getReadonly() ??       // prefer your FALLBACK_RPC (Alch/Infura)
+    injectedProvider ??    // then wallet RPC
     wcEthersProvider;
 
   if (!provider) throw new Error("No provider available for logs.");
   if (!NFT_ADDR) throw new Error("NFT address not set.");
 
-  // keep chunks comfortably under free-tier limits
-  const STEP = 80; // blocks per query (tweak if needed)
+  // free tiers allow ~10-block windows; start there and shrink if needed
+  const MAX_STEP = 10;
+  const MIN_STEP = 1;
+  let step = MAX_STEP;
 
-  // v6 providers return number for getBlockNumber()
   const latest = Number(await (provider as any).getBlockNumber?.() ?? 0);
   const start  = Number(NFT_DEPLOY_BLOCK);
-
   if (!Number.isFinite(latest) || latest <= 0 || latest < start) {
     throw new Error(`Invalid block range for logs: start=${start}, latest=${latest}`);
   }
@@ -36,9 +36,8 @@ async function mintedViaLogs(): Promise<bigint> {
   let total = 0n;
   const fromTopic = ethers.zeroPadValue(ZERO_ADDR, 32);
 
-  for (let from = start; from <= latest; from += STEP) {
-    const to = Math.min(from + STEP - 1, latest);
-
+  for (let from = start; from <= latest; ) {
+    const to = Math.min(from + step - 1, latest);
     const filter = {
       address: NFT_ADDR,
       fromBlock: from,
@@ -49,15 +48,24 @@ async function mintedViaLogs(): Promise<bigint> {
     try {
       const logs = await (provider as any).getLogs(filter);
       total += BigInt(logs.length);
+
+      // advance the window and lightly throttle to avoid rate limits
+      from = to + 1;
+      await new Promise(r => setTimeout(r, 120));
     } catch (e: any) {
-      // If a small window still fails, surface message and stop
-      console.warn(`mintedViaLogs: window ${from}-${to} failed:`, e?.message ?? e);
-      throw e;
+      // shrink the window and retry the same 'from' block
+      if (step > MIN_STEP) {
+        step = Math.max(MIN_STEP, Math.floor(step / 2));
+      } else {
+        console.warn(`mintedViaLogs: window ${from}-${to} failed at min step`, e?.message ?? e);
+        throw e;
+      }
     }
   }
 
   return total;
 }
+
 
 
 // ABIs (adjust if your function names differ)
@@ -239,7 +247,7 @@ export async function readState() {
       console.warn("minted read failed (logs + totalSupply):", e1, e2);
       mintedBI = null;
     }
-
+  }
 
   const capWei = BigInt(cap.toString());
   const raisedWei = BigInt(weiRaised.toString());
