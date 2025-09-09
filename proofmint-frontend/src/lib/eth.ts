@@ -5,11 +5,7 @@ import {
   CROWDSALE_ADDR, NFT_ADDR, FALLBACK_RPC, WC_PROJECT_ID
 } from "../config";
 
-// ---------- Config you may tune ----------
-const NFT_DEPLOY_BLOCK = 9007802;        // number, not BigInt
-const MIN_LOG_STEP = 1;                  // blocks
-const MAX_LOG_STEP = 10;                 // Alchemy free tier limit
-// -----------------------------------------
+
 
 const TRANSFER_TOPIC = ethers.id("Transfer(address,address,uint256)");
 const ZERO_ADDR = "0x0000000000000000000000000000000000000000";
@@ -20,21 +16,6 @@ let injectedProvider: ethers.BrowserProvider | null = null;
 let wcProvider: any | null = null;
 let wcEthersProvider: ethers.BrowserProvider | null = null;
 
-// lazy readonly provider
-let _readonlyProvider: ethers.JsonRpcProvider | null = null;
-function getReadonly(): ethers.JsonRpcProvider | null {
-  if (!FALLBACK_RPC || !/^https?:\/\//i.test(FALLBACK_RPC)) return null;
-  if (!_readonlyProvider) {
-    try { _readonlyProvider = new ethers.JsonRpcProvider(FALLBACK_RPC, CHAIN_ID); }
-    catch { _readonlyProvider = null; }
-  }
-  return _readonlyProvider;
-}
-
-// Prefer wallet providers for logs (Infura/own RPC), then fallback RPC
-function pickLogProvider(): ethers.AbstractProvider | null {
-  return injectedProvider ?? wcEthersProvider ?? getReadonly();
-}
 
 // Generic provider for contracts (same order, then readonly)
 function pickProvider(p?: ethers.Signer | ethers.Provider) {
@@ -80,16 +61,6 @@ export async function connectWalletConnect(): Promise<ethers.Signer> {
   return wcEthersProvider.getSigner();
 }
 
-// ----- ABIs / contracts -----
-const CROWDSALE_ABI = [
-  "function buy() payable",
-  "function rate() view returns (uint256)",
-  "function cap() view returns (uint256)",
-  "function weiRaised() view returns (uint256)",
-];
-const NFT_ABI = [
-  "function totalSupply() view returns (uint256)",
-];
 
 export async function getCrowdsaleContract(p?: ethers.Signer | ethers.Provider) {
   if (!CROWDSALE_ADDR) throw new Error("Crowdsale address not set.");
@@ -206,11 +177,7 @@ export async function buyTokensSmart(ethAmount: string, signer?: ethers.Signer) 
     try {
       const candidate = (sale as any)[fn];
       if (typeof candidate !== "function") continue;
-      if ((sale as any)[fn].staticCall) { await (sale as any)[fn].staticCall({ value }); }
-      else { await sale.getFunction(fn).staticCall({ value }); }
-      const tx = await (sale as any)[fn]({ value });
-      return tx.wait();
-    } catch { /* try next */ }
+
   }
   try { const tx = await signer.sendTransaction({ to: CROWDSALE_ADDR, value }); return tx.wait(); }
   catch (e: any) { throw new Error("Purchase failed. " + bestErr(e)); }
@@ -240,19 +207,6 @@ export async function readState() {
 // minted via logs (fallback that works even if totalSupply() reverts)
 let mintedBI: bigint | null = null;
   try {
-    // try fast path first
-    const ts = await withTimeout(nft.totalSupply(), 4000, "totalSupply()");
-    mintedBI = BigInt(ts.toString());
-  } catch (e1) {
-    console.warn("[readState] totalSupply() failed:", e1);
-    try {
-      // try logs with timeout (won’t freeze UI)
-      mintedBI = await withTimeout(mintedViaLogs(), 8000, "mintedViaLogs()");
-    } catch (e2) {
-      console.warn("[readState] mintedViaLogs() failed:", e2);
-      mintedBI = null; // show "N/A"
-    }
-  }
 
   const capWei = BigInt(cap.toString());
   const raisedWei = BigInt(weiRaised.toString());
