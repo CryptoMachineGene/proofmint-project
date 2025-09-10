@@ -5,37 +5,6 @@ import {
   CROWDSALE_ADDR, NFT_ADDR, FALLBACK_RPC, WC_PROJECT_ID
 } from "../config";
 
-// NFT mint count via logs
-const NFT_DEPLOY_BLOCK = 9007802n;
-
-const TRANSFER_TOPIC = ethers.id("Transfer(address,address,uint256)");
-const ZERO_ADDR = "0x0000000000000000000000000000000000000000";
-
-
-  const start  = Number(NFT_DEPLOY_BLOCK);
-  if (!Number.isFinite(latest) || latest <= 0 || latest < start) {
-    throw new Error(`Invalid block range for logs: start=${start}, latest=${latest}`);
-  }
-
-  let total = 0n;
-  const fromTopic = ethers.zeroPadValue(ZERO_ADDR, 32);
-
-    const filter = {
-      address: NFT_ADDR,
-      fromBlock: from,
-      toBlock: to,
-      topics: [TRANSFER_TOPIC, fromTopic, null, null],
-    } as any;
-
-    try {
-      const logs = await provider.getLogs(filter);
-      total += BigInt(logs.length);
-
-    }
-  }
-
-  return total;
-}
 
 // ABIs (adjust if your function names differ)
 const CROWDSALE_ABI = [
@@ -191,11 +160,6 @@ async function tryGet<T = any>(obj: any, names: string[]): Promise<{name: string
   return { name: "", value: null };
 }
 
-// helper: time-box a promise
-function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
-  return new Promise<T>((resolve, reject) => {
-    const t = setTimeout(() => reject(new Error("timeout")), ms);
-    p.then(v => { clearTimeout(t); resolve(v); }, e => { clearTimeout(t); reject(e); });
   });
 }
 
@@ -203,32 +167,15 @@ export async function readState() {
   const sale = await getCrowdsaleContract();
   const nft  = await getNftContract();
 
-  // get the cheap stuff first so UI can render quickly
   const [rate, cap, weiRaised] = await Promise.all([
-    sale.rate(),
-    sale.cap(),
-    sale.weiRaised(),
+    withTimeout(sale.rate(),      5000, "rate()"),
+    withTimeout(sale.cap(),       5000, "cap()"),
+    withTimeout(sale.weiRaised(), 5000, "weiRaised()"),
   ]);
 
-  let mintedStr = "N/A";
-
-  // 1) try logs, but bail fast if slow
-  try {
-    const viaLogs = await withTimeout(mintedViaLogs(), 2500); // 2.5s budget
-    mintedStr = viaLogs.toString();
-  } catch (e1) {
-    console.warn("mintedViaLogs failed or timed out:", e1);
-    // 2) fall back to totalSupply() with a smaller budget
-    try {
-      const ts = await withTimeout(nft.totalSupply(), 1500);  // 1.5s budget
-      mintedStr = BigInt(ts.toString()).toString();
-    } catch (e2) {
-      console.warn("totalSupply() fallback failed or timed out:", e2);
-      // keep "N/A"
-    }
   }
 
-  const capWei = BigInt(cap.toString());
+  const capWei    = BigInt(cap.toString());
   const raisedWei = BigInt(weiRaised.toString());
   const remaining = capWei > raisedWei ? capWei - raisedWei : 0n;
 
@@ -236,7 +183,7 @@ export async function readState() {
     rate: rate.toString(),
     cap: capWei.toString(),
     weiRaised: raisedWei.toString(),
-    nftsMinted: mintedStr,
+
     capRemainingWei: remaining.toString(),
   };
 }
