@@ -1,12 +1,9 @@
 import React from "react";
-
-import { ethers } from "ethers";
+import { formatEther } from "ethers";
 import { readState } from "../lib/eth";
-import type { FrontendState } from "../lib/eth";
 
 export default function StatePanel() {
-  const [state, setState] = React.useState<FrontendState | null>(null);
-
+  const [state, setState] = React.useState<any>(null);
   const [loading, setLoading] = React.useState(false);
   const [err, setErr] = React.useState<string>("");
 
@@ -25,25 +22,12 @@ export default function StatePanel() {
     }
   }, []);
 
-
   React.useEffect(() => { void refresh(); }, [refresh]);
-
-  // fallbacks if someone calls readState() from an older build
-  const displayRate = (s: FrontendState) =>
-    s.rateInt ?? (() => ethers.formatUnits(s.rate, 0))();
-
-  const displayRemainingEth = (s: FrontendState) =>
-    s.capRemainingEth ?? (() => ethers.formatEther(s.capRemainingWei))();
-
 
   return (
     <section className="mt-6">
       <h2 className="text-lg font-semibold mb-2">Sale State</h2>
-      <button
-        onClick={refresh}
-        disabled={loading}
-        className="px-3 py-1 bg-gray-200 rounded"
-      >
+      <button onClick={refresh} disabled={loading} className="px-3 py-1 bg-gray-200 rounded">
         {loading ? "Loading…" : "Refresh"}
       </button>
 
@@ -52,16 +36,9 @@ export default function StatePanel() {
 
       {state && (
         <ul className="mt-2 list-disc pl-5">
-
-          <li>Tokens per ETH (rate): {displayRate(state)}</li>
-          <li>Cap remaining (ETH): {displayRemainingEth(state)}</li>
-          <li>
-            Total NFTs minted:{" "}
-            {state.nftsMinted === "N/A"
-              ? "N/A (not exposed by contract)"
-              : state.nftsMinted}
-          </li>
-
+          <li>Tokens per ETH (rate): {state.rate}</li>
+          <li>Cap remaining (ETH): {Number(formatEther(state.capRemainingWei)).toFixed(3)}</li>
+          <li>Total NFTs minted: {state.nftsMinted === "N/A" ? "N/A (not exposed by contract)" : state.nftsMinted}</li>
         </ul>
       )}
     </section>
