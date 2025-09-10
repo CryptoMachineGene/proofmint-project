@@ -1,10 +1,12 @@
 import React from "react";
+
 import { ethers } from "ethers";
 import { readState } from "../lib/eth";
 import type { FrontendState } from "../lib/eth";
 
 export default function StatePanel() {
   const [state, setState] = React.useState<FrontendState | null>(null);
+
   const [loading, setLoading] = React.useState(false);
   const [err, setErr] = React.useState<string>("");
 
@@ -23,6 +25,7 @@ export default function StatePanel() {
     }
   }, []);
 
+
   React.useEffect(() => { void refresh(); }, [refresh]);
 
   // fallbacks if someone calls readState() from an older build
@@ -31,6 +34,7 @@ export default function StatePanel() {
 
   const displayRemainingEth = (s: FrontendState) =>
     s.capRemainingEth ?? (() => ethers.formatEther(s.capRemainingWei))();
+
 
   return (
     <section className="mt-6">
@@ -48,6 +52,7 @@ export default function StatePanel() {
 
       {state && (
         <ul className="mt-2 list-disc pl-5">
+
           <li>Tokens per ETH (rate): {displayRate(state)}</li>
           <li>Cap remaining (ETH): {displayRemainingEth(state)}</li>
           <li>
@@ -56,6 +61,7 @@ export default function StatePanel() {
               ? "N/A (not exposed by contract)"
               : state.nftsMinted}
           </li>
+
         </ul>
       )}
     </section>
