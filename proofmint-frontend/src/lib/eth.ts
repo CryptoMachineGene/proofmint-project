@@ -6,8 +6,6 @@ import {
 } from "../config";
 
 
-
-
 // ABIs (adjust if your function names differ)
 const CROWDSALE_ABI = [
   "function buy() payable",
@@ -162,15 +160,6 @@ async function tryGet<T = any>(obj: any, names: string[]): Promise<{name: string
   return { name: "", value: null };
 }
 
-
-// --- keep your imports and helpers as-is ---
-
-// tiny helper to time-box a Promise
-function withTimeout<T>(p: Promise<T>, ms = 6_000, label = "op"): Promise<T> {
-  return new Promise((resolve, reject) => {
-    const t = setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms);
-    p.then((v) => { clearTimeout(t); resolve(v); },
-           (e) => { clearTimeout(t); reject(e); });
   });
 }
 
@@ -178,21 +167,12 @@ export async function readState() {
   const sale = await getCrowdsaleContract();
   const nft  = await getNftContract();
 
-  // Hard cap: never let one slow call block the whole panel
   const [rate, cap, weiRaised] = await Promise.all([
     withTimeout(sale.rate(),      5000, "rate()"),
     withTimeout(sale.cap(),       5000, "cap()"),
     withTimeout(sale.weiRaised(), 5000, "weiRaised()"),
   ]);
 
-  // **Barebones minted**: only totalSupply()
-  let mintedStr = "N/A";
-  try {
-    const ts = await withTimeout(nft.totalSupply(), 5000, "totalSupply()");
-    mintedStr = BigInt(ts.toString()).toString();
-  } catch (e) {
-    // swallow: show N/A without retries or background loops
-    console.warn("totalSupply fallback failed:", e);
   }
 
   const capWei    = BigInt(cap.toString());
@@ -203,7 +183,7 @@ export async function readState() {
     rate: rate.toString(),
     cap: capWei.toString(),
     weiRaised: raisedWei.toString(),
-    nftsMinted: mintedStr,                 // <- only totalSupply
+
     capRemainingWei: remaining.toString(),
   };
 }
