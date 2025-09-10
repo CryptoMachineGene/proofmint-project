@@ -11,23 +11,7 @@ const NFT_DEPLOY_BLOCK = 9007802n;
 const TRANSFER_TOPIC = ethers.id("Transfer(address,address,uint256)");
 const ZERO_ADDR = "0x0000000000000000000000000000000000000000";
 
-// count mints by querying Transfer(from=0x0, any to, any tokenId)
-// robust: ≤10 block windows, auto-shrink on errors, gentle throttle
-async function mintedViaLogs(): Promise<bigint> {
-  const provider =
-    getReadonly() ??       // prefer your FALLBACK_RPC (Alch/Infura)
-    injectedProvider ??    // then wallet RPC
-    wcEthersProvider;
 
-  if (!provider) throw new Error("No provider available for logs.");
-  if (!NFT_ADDR) throw new Error("NFT address not set.");
-
-  // free tiers allow ~10-block windows; start there and shrink if needed
-  const MAX_STEP = 10;
-  const MIN_STEP = 1;
-  let step = MAX_STEP;
-
-  const latest = Number(await (provider as any).getBlockNumber?.() ?? 0);
   const start  = Number(NFT_DEPLOY_BLOCK);
   if (!Number.isFinite(latest) || latest <= 0 || latest < start) {
     throw new Error(`Invalid block range for logs: start=${start}, latest=${latest}`);
@@ -36,8 +20,6 @@ async function mintedViaLogs(): Promise<bigint> {
   let total = 0n;
   const fromTopic = ethers.zeroPadValue(ZERO_ADDR, 32);
 
-  for (let from = start; from <= latest; ) {
-    const to = Math.min(from + step - 1, latest);
     const filter = {
       address: NFT_ADDR,
       fromBlock: from,
@@ -46,27 +28,14 @@ async function mintedViaLogs(): Promise<bigint> {
     } as any;
 
     try {
-      const logs = await (provider as any).getLogs(filter);
+      const logs = await provider.getLogs(filter);
       total += BigInt(logs.length);
 
-      // advance the window and lightly throttle to avoid rate limits
-      from = to + 1;
-      await new Promise(r => setTimeout(r, 120));
-    } catch (e: any) {
-      // shrink the window and retry the same 'from' block
-      if (step > MIN_STEP) {
-        step = Math.max(MIN_STEP, Math.floor(step / 2));
-      } else {
-        console.warn(`mintedViaLogs: window ${from}-${to} failed at min step`, e?.message ?? e);
-        throw e;
-      }
     }
   }
 
   return total;
 }
-
-
 
 // ABIs (adjust if your function names differ)
 const CROWDSALE_ABI = [
@@ -222,30 +191,40 @@ async function tryGet<T = any>(obj: any, names: string[]): Promise<{name: string
   return { name: "", value: null };
 }
 
-
-
+// helper: time-box a promise
+function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const t = setTimeout(() => reject(new Error("timeout")), ms);
+    p.then(v => { clearTimeout(t); resolve(v); }, e => { clearTimeout(t); reject(e); });
+  });
+}
 
 export async function readState() {
   const sale = await getCrowdsaleContract();
-  const nft  = await getNftContract(); // keep if you still read other NFT funcs
+  const nft  = await getNftContract();
 
+  // get the cheap stuff first so UI can render quickly
   const [rate, cap, weiRaised] = await Promise.all([
     sale.rate(),
     sale.cap(),
     sale.weiRaised(),
   ]);
 
-  // minted via logs (fallback that works even if totalSupply() reverts)
-  let mintedBI: bigint | null = null;
+  let mintedStr = "N/A";
+
+  // 1) try logs, but bail fast if slow
   try {
-    const ts = await nft.totalSupply();
-    mintedBI = BigInt(ts.toString());
+    const viaLogs = await withTimeout(mintedViaLogs(), 2500); // 2.5s budget
+    mintedStr = viaLogs.toString();
   } catch (e1) {
+    console.warn("mintedViaLogs failed or timed out:", e1);
+    // 2) fall back to totalSupply() with a smaller budget
     try {
-      mintedBI = await mintedViaLogs();
+      const ts = await withTimeout(nft.totalSupply(), 1500);  // 1.5s budget
+      mintedStr = BigInt(ts.toString()).toString();
     } catch (e2) {
-      console.warn("minted read failed (logs + totalSupply):", e1, e2);
-      mintedBI = null;
+      console.warn("totalSupply() fallback failed or timed out:", e2);
+      // keep "N/A"
     }
   }
 
@@ -257,11 +236,11 @@ export async function readState() {
     rate: rate.toString(),
     cap: capWei.toString(),
     weiRaised: raisedWei.toString(),
-    nftsMinted: mintedBI !== null ? mintedBI.toString() : "N/A",
+    nftsMinted: mintedStr,
     capRemainingWei: remaining.toString(),
   };
 }
-}
+
 // (Optional) backwards-compat for older imports
 export const usingFallbackRPC = !!FALLBACK_RPC;
 export async function readDashboard() { return readState(); }
