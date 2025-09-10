@@ -160,20 +160,12 @@ async function tryGet<T = any>(obj: any, names: string[]): Promise<{name: string
   return { name: "", value: null };
 }
 
-  });
-}
-
-export async function readState() {
-  const sale = await getCrowdsaleContract();
-  const nft  = await getNftContract();
-
   const [rate, cap, weiRaised] = await Promise.all([
     withTimeout(sale.rate(),      5000, "rate()"),
     withTimeout(sale.cap(),       5000, "cap()"),
     withTimeout(sale.weiRaised(), 5000, "weiRaised()"),
   ]);
 
-  }
 
   const capWei    = BigInt(cap.toString());
   const raisedWei = BigInt(weiRaised.toString());
