@@ -6,7 +6,18 @@ import {
 } from "../config";
 
 
+export type FrontendState = {
+  // raw (for math / debugging)
+  rate: string;              // tokens per ETH (uint, as string)
+  cap: string;               // wei, as string
+  weiRaised: string;         // wei, as string
+  capRemainingWei: string;   // wei, as string
+  nftsMinted: string;        // "N/A" or integer string
 
+  // formatted (for UI)
+  rateInt: string;           // e.g. "1000"
+  capRemainingEth: string;   // e.g. "9.992"
+};
 
 // ABIs (adjust if your function names differ)
 const CROWDSALE_ABI = [
@@ -194,10 +205,10 @@ async function safeMintedCount(): Promise<string> {
 export async function readState() {
   const sale = await getCrowdsaleContract();
 
-  const [rate, cap, weiRaised] = await Promise.all([
-    sale.rate(),
-    sale.cap(),
-    sale.weiRaised(),
+   const [rate, cap, weiRaised] = await Promise.all([
+    withTimeout(sale.rate(),      5_000, "rate()"),
+    withTimeout(sale.cap(),       5_000, "cap()"),
+    withTimeout(sale.weiRaised(), 5_000, "weiRaised()"),
   ]);
 
   // Barebones minted: never throws, never logs
@@ -208,11 +219,16 @@ export async function readState() {
   const remaining = capWei > raisedWei ? capWei - raisedWei : 0n;
 
   return {
+    // raw
     rate: rate.toString(),
     cap: capWei.toString(),
     weiRaised: raisedWei.toString(),
-    nftsMinted: mintedStr,                 // <- always defined
     capRemainingWei: remaining.toString(),
+    nftsMinted: mintedStr,
+
+    // formatted
+    rateInt,
+    capRemainingEth,
   };
 }
 
