@@ -160,11 +160,49 @@ async function tryGet<T = any>(obj: any, names: string[]): Promise<{name: string
   return { name: "", value: null };
 }
 
+
+
+// --- keep your imports and helpers as-is ---
+
+// tiny helper to time-box a Promise
+function withTimeout<T>(p: Promise<T>, ms = 6_000, label = "op"): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const t = setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms);
+    p.then((v) => { clearTimeout(t); resolve(v); },
+           (e) => { clearTimeout(t); reject(e); });
+  });
+}
+
+async function safeMintedCount(): Promise<string> {
+  // Try common function names quietly; never throw or log
+  try {
+    const nft = await getNftContract();
+    const candidates = ["totalSupply", "totalMinted", "getTotalMinted"];
+    for (const name of candidates) {
+      const fn = (nft as any)[name];
+      if (typeof fn === "function") {
+        const v = await fn();
+        return BigInt(v.toString()).toString();
+      }
+    }
+  } catch { /* swallow */ }
+  return "N/A";
+}
+
+
+export async function readState() {
+  const sale = await getCrowdsaleContract();
+
+
   const [rate, cap, weiRaised] = await Promise.all([
     withTimeout(sale.rate(),      5000, "rate()"),
     withTimeout(sale.cap(),       5000, "cap()"),
     withTimeout(sale.weiRaised(), 5000, "weiRaised()"),
   ]);
+
+
+  // Barebones minted: never throws, never logs
+  const mintedStr = await safeMintedCount();
 
 
   const capWei    = BigInt(cap.toString());
@@ -175,6 +213,8 @@ async function tryGet<T = any>(obj: any, names: string[]): Promise<{name: string
     rate: rate.toString(),
     cap: capWei.toString(),
     weiRaised: raisedWei.toString(),
+
+    nftsMinted: mintedStr,                 // <- always defined
 
     capRemainingWei: remaining.toString(),
   };
