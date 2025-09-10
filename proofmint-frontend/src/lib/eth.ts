@@ -5,59 +5,7 @@ import {
   CROWDSALE_ADDR, NFT_ADDR, FALLBACK_RPC, WC_PROJECT_ID
 } from "../config";
 
-// NFT mint count via logs
-const NFT_DEPLOY_BLOCK = 9007802n;
 
-const TRANSFER_TOPIC = ethers.id("Transfer(address,address,uint256)");
-const ZERO_ADDR = "0x0000000000000000000000000000000000000000";
-
-// count mints by querying Transfer(from=0x0, any to, any tokenId)
-// count mints by querying Transfer(from=0x0, any to, any tokenId) in small block chunks
-async function mintedViaLogs(): Promise<bigint> {
-  const provider =
-    getReadonly() ??
-    injectedProvider ??
-    wcEthersProvider;
-
-  if (!provider) throw new Error("No provider available for logs.");
-  if (!NFT_ADDR) throw new Error("NFT address not set.");
-
-  // keep chunks comfortably under free-tier limits
-  const STEP = 80; // blocks per query (tweak if needed)
-
-  // v6 providers return number for getBlockNumber()
-  const latest = Number(await (provider as any).getBlockNumber?.() ?? 0);
-  const start  = Number(NFT_DEPLOY_BLOCK);
-
-  if (!Number.isFinite(latest) || latest <= 0 || latest < start) {
-    throw new Error(`Invalid block range for logs: start=${start}, latest=${latest}`);
-  }
-
-  let total = 0n;
-  const fromTopic = ethers.zeroPadValue(ZERO_ADDR, 32);
-
-  for (let from = start; from <= latest; from += STEP) {
-    const to = Math.min(from + STEP - 1, latest);
-
-    const filter = {
-      address: NFT_ADDR,
-      fromBlock: from,
-      toBlock: to,
-      topics: [TRANSFER_TOPIC, fromTopic, null, null],
-    } as any;
-
-    try {
-      const logs = await (provider as any).getLogs(filter);
-      total += BigInt(logs.length);
-    } catch (e: any) {
-      // If a small window still fails, surface message and stop
-      console.warn(`mintedViaLogs: window ${from}-${to} failed:`, e?.message ?? e);
-      throw e;
-    }
-  }
-
-  return total;
-}
 
 
 // ABIs (adjust if your function names differ)
@@ -215,33 +163,39 @@ async function tryGet<T = any>(obj: any, names: string[]): Promise<{name: string
 }
 
 
+// --- keep your imports and helpers as-is ---
 
+// tiny helper to time-box a Promise
+function withTimeout<T>(p: Promise<T>, ms = 6_000, label = "op"): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const t = setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms);
+    p.then((v) => { clearTimeout(t); resolve(v); },
+           (e) => { clearTimeout(t); reject(e); });
+  });
+}
 
 export async function readState() {
   const sale = await getCrowdsaleContract();
-  const nft  = await getNftContract(); // keep if you still read other NFT funcs
+  const nft  = await getNftContract();
 
+  // Hard cap: never let one slow call block the whole panel
   const [rate, cap, weiRaised] = await Promise.all([
-    sale.rate(),
-    sale.cap(),
-    sale.weiRaised(),
+    withTimeout(sale.rate(),      5000, "rate()"),
+    withTimeout(sale.cap(),       5000, "cap()"),
+    withTimeout(sale.weiRaised(), 5000, "weiRaised()"),
   ]);
 
-  // minted via logs (fallback that works even if totalSupply() reverts)
-  let mintedBI: bigint | null = null;
+  // **Barebones minted**: only totalSupply()
+  let mintedStr = "N/A";
   try {
-    const ts = await nft.totalSupply();
-    mintedBI = BigInt(ts.toString());
-  } catch (e1) {
-    try {
-      mintedBI = await mintedViaLogs();
-    } catch (e2) {
-      console.warn("minted read failed (logs + totalSupply):", e1, e2);
-      mintedBI = null;
-    }
+    const ts = await withTimeout(nft.totalSupply(), 5000, "totalSupply()");
+    mintedStr = BigInt(ts.toString()).toString();
+  } catch (e) {
+    // swallow: show N/A without retries or background loops
+    console.warn("totalSupply fallback failed:", e);
+  }
 
-
-  const capWei = BigInt(cap.toString());
+  const capWei    = BigInt(cap.toString());
   const raisedWei = BigInt(weiRaised.toString());
   const remaining = capWei > raisedWei ? capWei - raisedWei : 0n;
 
@@ -249,11 +203,11 @@ export async function readState() {
     rate: rate.toString(),
     cap: capWei.toString(),
     weiRaised: raisedWei.toString(),
-    nftsMinted: mintedBI !== null ? mintedBI.toString() : "N/A",
+    nftsMinted: mintedStr,                 // <- only totalSupply
     capRemainingWei: remaining.toString(),
   };
 }
-}
+
 // (Optional) backwards-compat for older imports
 export const usingFallbackRPC = !!FALLBACK_RPC;
 export async function readDashboard() { return readState(); }
