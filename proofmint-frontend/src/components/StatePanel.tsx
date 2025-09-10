@@ -46,6 +46,8 @@ export default function StatePanel() {
           <li>
             Total NFTs minted: {state.nftsMinted === "N/A" ? "N/A (not exposed by contract)" : state.nftsMinted}
           </li>
+          <li>Cap remaining (ETH): {(BigInt(state.capRemainingWei) / 10n**18n).toString()}</li>
+          <li>Total NFTs minted: {state.nftsMinted}</li>
         </ul>
       )}
     </section>

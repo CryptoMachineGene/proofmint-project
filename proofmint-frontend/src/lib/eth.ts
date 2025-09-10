@@ -6,8 +6,6 @@ import {
 } from "../config";
 
 
-
-
 // ABIs (adjust if your function names differ)
 const CROWDSALE_ABI = [
   "function buy() payable",
@@ -163,6 +161,7 @@ async function tryGet<T = any>(obj: any, names: string[]): Promise<{name: string
 }
 
 
+
 // --- keep your imports and helpers as-is ---
 
 // tiny helper to time-box a Promise
@@ -194,16 +193,19 @@ async function safeMintedCount(): Promise<string> {
 export async function readState() {
   const sale = await getCrowdsaleContract();
 
+
   const [rate, cap, weiRaised] = await Promise.all([
-    sale.rate(),
-    sale.cap(),
-    sale.weiRaised(),
+    withTimeout(sale.rate(),      5000, "rate()"),
+    withTimeout(sale.cap(),       5000, "cap()"),
+    withTimeout(sale.weiRaised(), 5000, "weiRaised()"),
   ]);
+
 
   // Barebones minted: never throws, never logs
   const mintedStr = await safeMintedCount();
 
-  const capWei = BigInt(cap.toString());
+
+  const capWei    = BigInt(cap.toString());
   const raisedWei = BigInt(weiRaised.toString());
   const remaining = capWei > raisedWei ? capWei - raisedWei : 0n;
 
@@ -211,7 +213,9 @@ export async function readState() {
     rate: rate.toString(),
     cap: capWei.toString(),
     weiRaised: raisedWei.toString(),
+
     nftsMinted: mintedStr,                 // <- always defined
+
     capRemainingWei: remaining.toString(),
   };
 }
