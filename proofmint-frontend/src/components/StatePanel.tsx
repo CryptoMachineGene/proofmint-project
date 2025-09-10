@@ -1,4 +1,5 @@
 import React from "react";
+import { ethers } from "ethers";   
 import { readState } from "../lib/eth";
 
 export default function StatePanel() {
@@ -41,8 +42,10 @@ export default function StatePanel() {
       {state && (
         <ul className="mt-2 list-disc pl-5">
           <li>Tokens per ETH (rate): {state.rate}</li>
-          <li>Cap remaining (ETH): {(BigInt(state.capRemainingWei) / 10n**18n).toString()}</li>
-          <li>Total NFTs minted: {state.nftsMinted}</li>
+          <li>Cap remaining (ETH): {Number(state.capRemainingEth).toFixed(3)}</li>
+          <li>
+            Total NFTs minted: {state.nftsMinted === "N/A" ? "N/A (not exposed by contract)" : state.nftsMinted}
+          </li>
         </ul>
       )}
     </section>
