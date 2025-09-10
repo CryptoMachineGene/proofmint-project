@@ -15,7 +15,7 @@ export type FrontendState = {
   nftsMinted: string;        // "N/A" or integer string
 
   // formatted (for UI)
-  rateInt: string;           // e.g. "1000"
+  rate: string;           // e.g. "1000"
   capRemainingEth: string;   // e.g. "9.992"
 };
 
@@ -186,33 +186,8 @@ function withTimeout<T>(p: Promise<T>, ms = 6_000, label = "op"): Promise<T> {
   });
 }
 
-async function safeMintedCount(): Promise<string> {
-  // Try common function names quietly; never throw or log
-  try {
-    const nft = await getNftContract();
-    const candidates = ["totalSupply", "totalMinted", "getTotalMinted"];
-    for (const name of candidates) {
-      const fn = (nft as any)[name];
-      if (typeof fn === "function") {
-        const v = await fn();
-        return BigInt(v.toString()).toString();
-      }
-    }
-  } catch { /* swallow */ }
-  return "N/A";
-}
-
 // --- keep your imports and helpers as-is ---
 
-// tiny helper to time-box a Promise
-function withTimeout<T>(p: Promise<T>, ms = 6_000, label = "op"): Promise<T> {
-  return new Promise((resolve, reject) => {
-    const t = setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms);
-    p.then((v) => { clearTimeout(t); resolve(v); },
-           (e) => { clearTimeout(t); reject(e); });
-  });
-}
-
 async function safeMintedCount(): Promise<string> {
   // Try common function names quietly; never throw or log
   try {
@@ -230,34 +205,30 @@ async function safeMintedCount(): Promise<string> {
 }
 
 
+// proofmint-frontend/src/lib/eth.ts
 export async function readState() {
   const sale = await getCrowdsaleContract();
 
-
-   const [rate, cap, weiRaised] = await Promise.all([
+  const [rate, cap, weiRaised] = await Promise.all([
     withTimeout(sale.rate(),      5_000, "rate()"),
     withTimeout(sale.cap(),       5_000, "cap()"),
     withTimeout(sale.weiRaised(), 5_000, "weiRaised()"),
   ]);
 
-  // Barebones minted: never throws, never logs
   const mintedStr = await safeMintedCount();
 
-  const capWei    = BigInt(cap.toString());
-  const raisedWei = BigInt(weiRaised.toString());
-  const remaining = capWei > raisedWei ? capWei - raisedWei : 0n;
+  // normalize to strings
+  const rateStr    = BigInt(rate.toString()).toString();
+  const capWei     = BigInt(cap.toString());
+  const raisedWei  = BigInt(weiRaised.toString());
+  const remaining  = capWei > raisedWei ? capWei - raisedWei : 0n;
 
   return {
-    // raw
-    rate: rate.toString(),
+    rate: rateStr,                       // <- string
     cap: capWei.toString(),
     weiRaised: raisedWei.toString(),
-    capRemainingWei: remaining.toString(),
-    nftsMinted: mintedStr,
-
-    // formatted
-    rateInt,
-    capRemainingEth,
+    nftsMinted: mintedStr,               // <- string or "N/A"
+    capRemainingWei: remaining.toString()
   };
 }
 
