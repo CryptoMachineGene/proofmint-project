@@ -8,6 +8,7 @@ export default function App() {
   const [signer, setSigner] = useState<Signer | null>(null);
   const [who, setWho] = useState<string>("");
   const [via, setVia] = useState<"Injected" | "WalletConnect" | null>(null);
+  const [tick, setTick] = useState(0); // bump to remount StatePanel
 
   async function onConnected(s: Signer, label: "Injected" | "WalletConnect") {
     setSigner(s);
@@ -25,8 +26,8 @@ export default function App() {
       </header>
 
       <ConnectButtons onConnected={onConnected} />
-      <BuyForm signer={signer} />
-      <StatePanel />
+      <BuyForm signer={signer} onPurchased={() => setTick(t => t + 1)} />
+      <StatePanel key={tick} />
       <footer style={{ marginTop: "2rem", fontSize: "0.9em", color: "#666" }}>
         🚀 Proofmint frontend running — dev build active
       </footer>

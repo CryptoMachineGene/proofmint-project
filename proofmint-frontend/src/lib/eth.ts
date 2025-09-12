@@ -1,3 +1,4 @@
+// proofmint-frontend/src/lib/eth.ts
 import { ethers } from "ethers";
 import EthereumProvider from "@walletconnect/ethereum-provider";
 import {
@@ -6,23 +7,63 @@ import {
 } from "../config";
 
 
-export type FrontendState = {
-  // raw (for math / debugging)
-  rate: string;              // tokens per ETH (uint, as string)
-  cap: string;               // wei, as string
-  weiRaised: string;         // wei, as string
-  capRemainingWei: string;   // wei, as string
-  nftsMinted: string;        // "N/A" or integer string
+// -------------------------------
+// NFT mint count via logs
+// -------------------------------
+const NFT_DEPLOY_BLOCK = 9007802n;
 
-  // formatted (for UI)
-  rate: string;           // e.g. "1000"
-  capRemainingEth: string;   // e.g. "9.992"
-};
+// count mints by querying Transfer(from=0x0, any to, any tokenId) in small block chunks
+async function mintedViaLogs(): Promise<bigint> {
+  const provider =
+    getReadonly() ??
+    injectedProvider ??
+    wcEthersProvider;
 
+  if (!provider) throw new Error("No provider available for logs.");
+  if (!NFT_ADDR) throw new Error("NFT address not set.");
 
-// ABIs (adjust if your function names differ)
+  // keep chunks comfortably under free-tier limits
+  const STEP = 80; // blocks per query (tweak if needed)
+
+  // v6 providers return number for getBlockNumber()
+  const latest = Number(await (provider as any).getBlockNumber?.() ?? 0);
+  const start  = Number(NFT_DEPLOY_BLOCK);
+
+  if (!Number.isFinite(latest) || latest <= 0 || latest < start) {
+    throw new Error(`Invalid block range for logs: start=${start}, latest=${latest}`);
+  }
+
+  let total = 0n;
+  const fromTopic = ethers.zeroPadValue(ZERO_ADDR, 32);
+
+  for (let from = start; from <= latest; from += STEP) {
+    const to = Math.min(from + STEP - 1, latest);
+
+    const filter = {
+      address: NFT_ADDR,
+      fromBlock: from,
+      toBlock: to,
+      topics: [TRANSFER_TOPIC, fromTopic, null, null],
+    } as any;
+
+    try {
+      const logs = await (provider as any).getLogs(filter);
+      total += BigInt(logs.length);
+    } catch (e: any) {
+      console.warn(`mintedViaLogs: window ${from}-${to} failed:`, e?.message ?? e);
+      throw e;
+    }
+  }
+
+  return total;
+}
+
+// -------------------------------
+// Minimal ABIs (adjust if names differ)
+// -------------------------------
 const CROWDSALE_ABI = [
   "function buy() payable",
+  "function buyTokens() payable",
   "function rate() view returns (uint256)",
   "function cap() view returns (uint256)",
   "function weiRaised() view returns (uint256)",
@@ -31,6 +72,9 @@ const NFT_ABI = [
   "function totalSupply() view returns (uint256)",
 ];
 
+// -------------------------------
+// Wallet plumbing
+// -------------------------------
 export type WalletKind = "Injected" | "WalletConnect";
 
 let injectedProvider: ethers.BrowserProvider | null = null;
@@ -100,6 +144,9 @@ function pickProvider(p?: ethers.Signer | ethers.Provider) {
   throw new Error("No provider available (connect a wallet or set VITE_FALLBACK_RPC).");
 }
 
+// -------------------------------
+// Contracts
+// -------------------------------
 export async function getCrowdsaleContract(p?: ethers.Signer | ethers.Provider) {
   if (!CROWDSALE_ADDR) throw new Error("Crowdsale address not set.");
   return new ethers.Contract(CROWDSALE_ADDR, CROWDSALE_ABI, pickProvider(p));
@@ -110,6 +157,9 @@ export async function getNftContract(p?: ethers.Signer | ethers.Provider) {
   return new ethers.Contract(NFT_ADDR, NFT_ABI, pickProvider(p));
 }
 
+// -------------------------------
+// BUY flow (tries common function names, falls back to raw send)
+// -------------------------------
 const BUY_FN_CANDIDATES = [
   "buy",
   "buyTokens",
@@ -133,7 +183,7 @@ export async function buyTokensSmart(ethAmount: string, signer?: ethers.Signer) 
       const candidate = (sale as any)[fn];
       if (typeof candidate !== "function") continue;
 
-      // Dry-run first: static call (no MetaMask prompt, no spammy "execution reverted")
+      // Dry-run first: static call (no prompt, clean error surface)
       if ((sale as any)[fn].staticCall) {
         await (sale as any)[fn].staticCall({ value });
       } else {
@@ -145,7 +195,7 @@ export async function buyTokensSmart(ethAmount: string, signer?: ethers.Signer) 
       const tx = await (sale as any)[fn]({ value });
       return tx.wait();
     } catch {
-      // Try next candidate silently
+      // try next candidate
     }
   }
 
@@ -161,7 +211,31 @@ export async function buyTokensSmart(ethAmount: string, signer?: ethers.Signer) 
   }
 }
 
-// helper: try a list of candidate getter names and return the first that works
+// -------------------------------
+// Simple sale-state reader (matches our working `cast call`s)
+// -------------------------------
+export async function fetchSaleState() {
+  const provider = hasInjected()
+    ? new ethers.BrowserProvider((window as any).ethereum)
+    : new ethers.JsonRpcProvider(FALLBACK_RPC);
+
+  const sale = new ethers.Contract(CROWDSALE_ADDR, CROWDSALE_ABI, provider);
+  const [rate, cap, raised] = await Promise.all([
+    sale.rate(),
+    sale.cap(),
+    sale.weiRaised(),
+  ]);
+
+  return {
+    rate: rate.toString(),
+    capEth: ethers.formatEther(cap),
+    raisedEth: ethers.formatEther(raised),
+  };
+}
+
+// -------------------------------
+// Helper: try a list of candidate getter names (kept if you use elsewhere)
+// -------------------------------
 async function tryGet<T = any>(obj: any, names: string[]): Promise<{name: string; value: T | null}> {
   for (const n of names) {
     try {
@@ -175,37 +249,10 @@ async function tryGet<T = any>(obj: any, names: string[]): Promise<{name: string
 }
 
 
-// --- keep your imports and helpers as-is ---
+// -------------------------------
+// Dashboard/state aggregator (fixed braces)
+// -------------------------------
 
-// tiny helper to time-box a Promise
-function withTimeout<T>(p: Promise<T>, ms = 6_000, label = "op"): Promise<T> {
-  return new Promise((resolve, reject) => {
-    const t = setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms);
-    p.then((v) => { clearTimeout(t); resolve(v); },
-           (e) => { clearTimeout(t); reject(e); });
-  });
-}
-
-// --- keep your imports and helpers as-is ---
-
-async function safeMintedCount(): Promise<string> {
-  // Try common function names quietly; never throw or log
-  try {
-    const nft = await getNftContract();
-    const candidates = ["totalSupply", "totalMinted", "getTotalMinted"];
-    for (const name of candidates) {
-      const fn = (nft as any)[name];
-      if (typeof fn === "function") {
-        const v = await fn();
-        return BigInt(v.toString()).toString();
-      }
-    }
-  } catch { /* swallow */ }
-  return "N/A";
-}
-
-
-// proofmint-frontend/src/lib/eth.ts
 export async function readState() {
   const sale = await getCrowdsaleContract();
 
@@ -215,7 +262,21 @@ export async function readState() {
     withTimeout(sale.weiRaised(), 5_000, "weiRaised()"),
   ]);
 
-  const mintedStr = await safeMintedCount();
+
+  // minted via logs (fallback that works even if totalSupply() reverts)
+  let mintedBI: bigint | null = null;
+  try {
+    const ts = await nft.totalSupply();
+    mintedBI = BigInt(ts.toString());
+  } catch (e1) {
+    try {
+      mintedBI = await mintedViaLogs();
+    } catch (e2) {
+      console.warn("minted read failed (logs + totalSupply):", e1, e2);
+      mintedBI = null;
+    }
+  }
+
 
   // normalize to strings
   const rateStr    = BigInt(rate.toString()).toString();
@@ -232,6 +293,6 @@ export async function readState() {
   };
 }
 
-// (Optional) backwards-compat for older imports
+// -------------------------------
 export const usingFallbackRPC = !!FALLBACK_RPC;
 export async function readDashboard() { return readState(); }

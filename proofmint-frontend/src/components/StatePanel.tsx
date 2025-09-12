@@ -1,46 +1,55 @@
-import React from "react";
-import { formatEther } from "ethers";
-import { readState } from "../lib/eth";
+import React, { useState, useEffect } from "react";
+import { fetchSaleState } from "../lib/eth";
+
+type SaleState = {
+  rate: string;
+  capEth: string;
+  raisedEth: string;
+};
 
 export default function StatePanel() {
-  const [state, setState] = React.useState<any>(null);
-  const [loading, setLoading] = React.useState(false);
-  const [err, setErr] = React.useState<string>("");
+  const [sale, setSale] = useState<SaleState | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const refresh = React.useCallback(async () => {
+  async function handleRefresh() {
     setLoading(true);
-    setErr("");
+    setError(null);
     try {
-      const s = await readState();
-      setState(s);
+      const s = await fetchSaleState();
+      setSale(s);
     } catch (e: any) {
-      console.error("readState failed:", e);
-      setErr(e?.message ?? String(e));
-      setState(null);
+      console.error("refresh error:", e);
+      setError(e.message ?? "Failed to fetch sale state");
     } finally {
       setLoading(false);
     }
+  }
+
+  // auto-refresh on mount
+  useEffect(() => {
+    handleRefresh();
   }, []);
 
-  React.useEffect(() => { void refresh(); }, [refresh]);
-
   return (
-    <section className="mt-6">
-      <h2 className="text-lg font-semibold mb-2">Sale State</h2>
-      <button onClick={refresh} disabled={loading} className="px-3 py-1 bg-gray-200 rounded">
-        {loading ? "Loading…" : "Refresh"}
+    <section className="bg-white rounded-2xl shadow p-5 mb-6">
+      <h2 className="text-lg font-semibold mb-3">Sale State</h2>
+
+      <button
+        onClick={handleRefresh}
+        className="px-3 py-1 rounded-xl bg-blue-600 text-white mb-3"
+        disabled={loading}
+      >
+        {loading ? "Refreshing..." : "Refresh"}
       </button>
 
-      {err && <p className="text-red-600 mt-2">Error: {err}</p>}
-      {!state && !err && <p className="mt-2">No data yet.</p>}
+      {error && <div className="text-red-500">{error}</div>}
 
-      {state && (
-        <ul className="mt-2 list-disc pl-5">
-          <li>Tokens per ETH (rate): {state.rate}</li>
-          <li>Cap remaining (ETH): {Number(formatEther(state.capRemainingWei)).toFixed(3)}</li>
-          <li>Total NFTs minted: {state.nftsMinted === "N/A" ? "N/A (not exposed by contract)" : state.nftsMinted}</li>
+      {sale ? (
+        <ul className="space-y-1">
+          <li>Rate: {sale.rate} tokens per ETH</li>
+          <li>Cap: {sale.capEth} ETH</li>
+          <li>Raised: {sale.raisedEth} ETH</li>
         </ul>
-      )}
-    </section>
-  );
-}
+      ) : (
+        !loading && <div>No data yet.</div>
