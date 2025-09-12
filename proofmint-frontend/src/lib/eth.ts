@@ -6,13 +6,11 @@ import {
   CROWDSALE_ADDR, NFT_ADDR, FALLBACK_RPC, WC_PROJECT_ID
 } from "../config";
 
+
 // -------------------------------
 // NFT mint count via logs
 // -------------------------------
 const NFT_DEPLOY_BLOCK = 9007802n;
-
-const TRANSFER_TOPIC = ethers.id("Transfer(address,address,uint256)");
-const ZERO_ADDR = "0x0000000000000000000000000000000000000000";
 
 // count mints by querying Transfer(from=0x0, any to, any tokenId) in small block chunks
 async function mintedViaLogs(): Promise<bigint> {
@@ -250,18 +248,20 @@ async function tryGet<T = any>(obj: any, names: string[]): Promise<{name: string
   return { name: "", value: null };
 }
 
+
 // -------------------------------
 // Dashboard/state aggregator (fixed braces)
 // -------------------------------
+
 export async function readState() {
   const sale = await getCrowdsaleContract();
-  const nft  = await getNftContract(); // keep if you still read other NFT funcs
 
   const [rate, cap, weiRaised] = await Promise.all([
-    sale.rate(),
-    sale.cap(),
-    sale.weiRaised(),
+    withTimeout(sale.rate(),      5_000, "rate()"),
+    withTimeout(sale.cap(),       5_000, "cap()"),
+    withTimeout(sale.weiRaised(), 5_000, "weiRaised()"),
   ]);
+
 
   // minted via logs (fallback that works even if totalSupply() reverts)
   let mintedBI: bigint | null = null;
@@ -277,16 +277,19 @@ export async function readState() {
     }
   }
 
-  const capWei = BigInt(cap.toString());
-  const raisedWei = BigInt(weiRaised.toString());
-  const remaining = capWei > raisedWei ? capWei - raisedWei : 0n;
+
+  // normalize to strings
+  const rateStr    = BigInt(rate.toString()).toString();
+  const capWei     = BigInt(cap.toString());
+  const raisedWei  = BigInt(weiRaised.toString());
+  const remaining  = capWei > raisedWei ? capWei - raisedWei : 0n;
 
   return {
-    rate: rate.toString(),
+    rate: rateStr,                       // <- string
     cap: capWei.toString(),
     weiRaised: raisedWei.toString(),
-    nftsMinted: mintedBI !== null ? mintedBI.toString() : "N/A",
-    capRemainingWei: remaining.toString(),
+    nftsMinted: mintedStr,               // <- string or "N/A"
+    capRemainingWei: remaining.toString()
   };
 }
 

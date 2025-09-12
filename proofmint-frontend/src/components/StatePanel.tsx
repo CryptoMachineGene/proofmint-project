@@ -53,7 +53,3 @@ export default function StatePanel() {
         </ul>
       ) : (
         !loading && <div>No data yet.</div>
-      )}
-    </section>
-  );
-}
