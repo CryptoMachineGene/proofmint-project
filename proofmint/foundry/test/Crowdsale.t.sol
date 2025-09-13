@@ -21,32 +21,31 @@ contract CrowdsaleTest is Test {
   address buyer = address(0xB0B);
 
   function setUp() public {
-    token = new Token("Proofmint Token", "PMT");
-    nft   = new ProofNFT("Proofmint Proof", "PRF", "https://your-base-uri/{id}");
+  // Deploy token & NFT
+  token = new Token("Proofmint Token", "PMT");
+  nft   = new ProofNFT("Proofmint Proof", "PRF", "https://your-base-uri/{id}");
 
-    uint256 rateScaled = 1000 ether; // 1000 tokens / 1 ETH (scaled 1e18)
-    uint256 capWei     = 10 ether;
+  // Deploy crowdsale (keep your exact ctor order)
+  uint256 rateScaled = 1000 ether; // 1000 tokens / 1 ETH (scaled 1e18)
+  uint256 capWei     = 10 ether;
+  sale = new Crowdsale(address(token), rateScaled, capWei, address(nft));
 
-    sale = new Crowdsale(address(token), rateScaled, capWei, address(nft));
+  // Grant NFT MINTER role to the Crowdsale (required for mintReceipt) ---
+  // The grant must be done by an account with DEFAULT_ADMIN_ROLE (the deployer here is address(this))
+  bytes32 minterRole = IAccessControlLike(address(nft)).MINTER_ROLE();
+  vm.prank(address(this));
+  IAccessControlLike(address(nft)).grantRole(minterRole, address(sale));
 
-    // --- Grant NFT minter to Crowdsale (AccessControl or custom) ---
-    try IAccessControlLike(address(nft)).MINTER_ROLE() returns (bytes32 roleNft) {
-      IAccessControlLike(address(nft)).grantRole(roleNft, address(sale));
-    } catch {
-      // fallback if your NFT exposes a custom grant method instead
-      // nft.grantMinter(address(sale));
-    }
+  // Allow Crowdsale to mint tokens
+  token.setMinter(address(sale));
 
-    // --- Grant TOKEN minter to Crowdsale (this fixes the revert) ---
-    try IAccessControlLike(address(token)).MINTER_ROLE() returns (bytes32 roleTok) {
-      IAccessControlLike(address(token)).grantRole(roleTok, address(sale));
-    } catch {
-      // if your Token uses ownership instead of roles, use this instead:
-      // token.transferOwnership(address(sale));
-    }
+  // Seed Crowdsale with tokens to sell
+  vm.prank(address(sale));
+  token.mint(address(sale), 100_000 ether);
 
-    vm.deal(buyer, 1 ether);
-  }
+  // Seed buyer with ETH
+  vm.deal(buyer, 1 ether);
+}
 
   function testBuyMintsTokensAndRaisesWei() public {
     uint256 preBal = IERC20(address(token)).balanceOf(buyer);

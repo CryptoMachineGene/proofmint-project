@@ -10,33 +10,28 @@ pnpm-debug.log*
 .env.*
 
 # Hardhat
-cache/
-artifacts/
+/artifacts/
+/cache/
+/typechain/
+/typechain-types/
+/coverage/
+/coverage.json
+/lcov.info
+/ignition/deployments/chain-31337
 
-# TypeChain
-typechain/
-typechain-types/
+# Foundry
+/out/
+/cache_forge/
+/foundry.toml.old
 
-# Solidity coverage
-coverage/
-coverage.json
-lcov.info
-
-# Hardhat Ignition local deployments
-ignition/deployments/chain-31337
+# Frontend (Vite/React/Tailwind builds)
+dist/
+.vite/
+*.tsbuildinfo
 
 # OS cruft
 .DS_Store
 Thumbs.db
-# Hardhat build artifacts
-/artifacts/
-/cache/
-/typechain-types/
 
-# Coverage
-/coverage/
-
-# Env & local
-.env
-.env.*
+# Local deployments
 deployments/latest.json
