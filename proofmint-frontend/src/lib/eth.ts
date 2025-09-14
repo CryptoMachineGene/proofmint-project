@@ -214,22 +214,34 @@ export async function buyTokensSmart(ethAmount: string, signer?: ethers.Signer) 
 // -------------------------------
 // Simple sale-state reader (matches our working `cast call`s)
 // -------------------------------
-export async function fetchSaleState() {
-  const provider = hasInjected()
-    ? new ethers.BrowserProvider((window as any).ethereum)
-    : new ethers.JsonRpcProvider(FALLBACK_RPC);
+import { ethers } from "ethers";
+// ... your other imports (env, abis, addrs)
 
-  const sale = new ethers.Contract(CROWDSALE_ADDR, CROWDSALE_ABI, provider);
-  const [rate, cap, raised] = await Promise.all([
+import { ethers } from "ethers";
+// FALLBACK_RPC should already be set from .env.local
+
+export async function fetchSaleState() {
+  // Always use RPC for reads (more consistent than injected)
+  const rpc = new ethers.JsonRpcProvider(FALLBACK_RPC);
+
+  const sale = new ethers.Contract(CROWDSALE_ADDR, CROWDSALE_ABI, rpc);
+  const saleAddr = await sale.getAddress();
+
+  // Nudge provider to latest head (helps some RPCs)
+  await rpc.getBlockNumber();
+
+  const [rateRaw, capRaw, raisedRaw, balanceRaw] = await Promise.all([
     sale.rate(),
     sale.cap(),
     sale.weiRaised(),
+    rpc.getBalance(saleAddr), // current contract balance
   ]);
 
   return {
-    rate: rate.toString(),
-    capEth: ethers.formatEther(cap),
-    raisedEth: ethers.formatEther(raised),
+    rate: ethers.formatUnits(rateRaw, 18),
+    capEth: ethers.formatEther(capRaw),
+    raisedEth: ethers.formatEther(raisedRaw),
+    balanceEth: ethers.formatEther(balanceRaw),
   };
 }
 

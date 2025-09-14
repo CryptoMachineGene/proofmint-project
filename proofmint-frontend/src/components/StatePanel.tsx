@@ -4,7 +4,8 @@ import { fetchSaleState } from "../lib/eth";
 type SaleState = {
   rate: string;
   capEth: string;
-  raisedEth: string;
+  raisedEth: string;   // lifetime
+  balanceEth: string;  // current
 };
 
 export default function StatePanel() {
@@ -45,11 +46,18 @@ export default function StatePanel() {
 
       {error && <div className="text-red-500">{error}</div>}
 
-      {sale ? (
+      {loading ? (
+        <div>Loading...</div>
+      ) : sale ? (
         <ul className="space-y-1">
-          <li>Rate: {sale.rate} tokens per ETH</li>
-          <li>Cap: {sale.capEth} ETH</li>
-          <li>Raised: {sale.raisedEth} ETH</li>
+          <li>Rate: {Number(sale.rate).toLocaleString()} tokens per ETH</li>
+          <li>Cap: {Number(sale.capEth).toLocaleString()} ETH</li>
+          <li>Raised (lifetime): {Number(sale.raisedEth).toLocaleString()} ETH</li>
+          <li>Balance (current): {Number(sale.balanceEth).toLocaleString()} ETH</li>
         </ul>
       ) : (
-        !loading && <div>No data yet.</div>
+        <div>No data yet.</div>
+      )}
+    </section>
+  );
+}
