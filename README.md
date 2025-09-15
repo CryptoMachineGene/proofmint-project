@@ -122,3 +122,11 @@ ProofNFT: 0x... (optional)
 
 ## License
 MIT
+
+## Project Status
+- ✅ Contracts complete & verified on Sepolia
+- ✅ Frontend scaffolded (wallet connect, state panel)
+- ⏳ Buy/Withdraw UI polish
+- ⏳ Portfolio/demo site polish
+
+_Last updated: 2025-09-15_
