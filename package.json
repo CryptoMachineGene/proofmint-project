@@ -1,0 +1,28 @@
+{
+  "name": "proofmint-project",
+  "private": true,
+  "workspaces": [
+    "proofmint",
+    "proofmint-frontend"
+  ],
+  "scripts": {
+    "dev:ui": "npm -w proofmint-frontend run dev",
+    "build:ui": "npm -w proofmint-frontend run build",
+    "preview:ui": "npm -w proofmint-frontend run preview",
+
+    "test:contracts": "npm -w proofmint run test",
+    "compile:contracts": "npm -w proofmint run compile",
+    "coverage:contracts": "npm -w proofmint run coverage",
+
+    "deploy:sepolia": "npm -w proofmint run deploy:sepolia:ts",
+    "buy:sepolia": "npm -w proofmint run buy:sepolia:ts",
+    "withdraw:sepolia": "npm -w proofmint run withdraw:sepolia:ts",
+    "show:sepolia": "npm -w proofmint run show:sepolia",
+  
+    "dev:frontend": "npm --prefix proofmint-frontend run dev",
+    "build:frontend": "npm --prefix proofmint-frontend run build",
+
+
+    "demo:buy": "TS_NODE_TRANSPILE_ONLY=1 node --loader ts-node/esm demo/buy.ts"
+  }
+}
