@@ -30,3 +30,7 @@ proofmint-frontend/node_modules
 proofmint-frontend/dist
 .env.local
 .env.local
+
+# envs
+.env*
+!.env.example

@@ -55,7 +55,7 @@ export default function BuyForm({ signer, onPurchased }: Props) {
           <div className="text-sm text-gray-600 mb-1">Amount (ETH)</div>
           <input
             value={ethAmount}
-            onChange={(e) => setEthAmount(e.target.value)}
+            onChange={(e) => setEthAmount(e.target.value.replace(",", "."))}
             type="number"
             min="0"
             step="0.0001"
