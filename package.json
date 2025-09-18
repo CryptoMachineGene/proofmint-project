@@ -1,0 +1,39 @@
+{
+  "name": "proofmint-project",
+  "private": true,
+  "version": "0.0.0",
+  "scripts": {
+    "frontend:dev": "npm run dev --prefix proofmint-frontend",
+    "frontend:dev:sepolia": "npm run dev:sepolia --prefix proofmint-frontend",
+    "frontend:build": "npm run build --prefix proofmint-frontend",
+    "frontend:preview": "npm run preview --prefix proofmint-frontend",
+    "frontend:lint": "npm run lint --prefix proofmint-frontend",
+    "contracts:compile": "npm run compile --prefix proofmint",
+    "contracts:test": "npm run test --prefix proofmint",
+    "contracts:test:changed": "npm run test:changed --prefix proofmint",
+    "contracts:coverage": "npm run coverage --prefix proofmint",
+    "contracts:deploy:local": "npm run deploy:local --prefix proofmint",
+    "contracts:deploy:anvil": "npm run deploy:anvil --prefix proofmint",
+    "contracts:deploy:sepolia": "npm run deploy:sepolia --prefix proofmint",
+    "contracts:deploy:sepolia:ts": "npm run deploy:sepolia:ts --prefix proofmint",
+    "contracts:verify:sepolia": "npm run verify:sepolia --prefix proofmint",
+    "contracts:buy:sepolia": "npm run buy:sepolia --prefix proofmint",
+    "contracts:buy:sepolia:ts": "npm run buy:sepolia:ts --prefix proofmint",
+    "contracts:withdraw:sepolia": "npm run withdraw:sepolia --prefix proofmint",
+    "contracts:withdraw:sepolia:ts": "npm run withdraw:sepolia:ts --prefix proofmint",
+    "contracts:show:sepolia": "npm run show:sepolia --prefix proofmint",
+    "contracts:node:hh": "npm run node:hh --prefix proofmint",
+    "contracts:node:anvil": "npm run node:anvil --prefix proofmint",
+    "demo:sepolia": "npm run contracts:deploy:sepolia && npm run contracts:show:sepolia && npm run frontend:dev:sepolia",
+    "demo:sepolia:ts": "npm run contracts:deploy:sepolia:ts && npm run contracts:show:sepolia && npm run frontend:dev:sepolia",
+    "demo:local": "npm run contracts:node:hh:bg && npx wait-port 8545 && npm run contracts:deploy:local && npm run dev:local --prefix proofmint-frontend",
+    "demo:anvil": "npm run contracts:node:anvil & sleep 1 && npm run contracts:deploy:anvil && npm run frontend:dev",
+    "contracts:node:hh:bg": "sh -c \"npm run contracts:node:hh &\"",
+    "dev": "vite",
+    "dev:local": "npm run sync:deployments:local && vite",
+    "dev:sepolia": "npm run sync:deployments && vite --mode sepolia"
+  },
+  "devDependencies": {
+    "wait-port": "^1.1.0"
+  }
+}
