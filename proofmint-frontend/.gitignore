@@ -34,3 +34,5 @@ proofmint-frontend/dist
 # envs
 .env*
 !.env.example
+
+node_modules/
