@@ -1,37 +1,54 @@
-import { useState } from "react";
-import type { Signer } from "ethers";
+// src/App.tsx
+import { useEffect, useState } from "react";
 import ConnectButtons from "./components/ConnectButtons";
-import BuyForm from "./components/BuyForm";
 import StatePanel from "./components/StatePanel";
+import BuyForm from "./components/BuyForm";
+import Withdraw from "./components/Withdraw";
+import type { WalletState } from "./lib/eth";
 
 export default function App() {
-  const [signer, setSigner] = useState<Signer | null>(null);
-  const [who, setWho] = useState<string>("");
-  const [via, setVia] = useState<"Injected" | "WalletConnect" | null>(null);
-  const [tick, setTick] = useState(0); // bump to remount StatePanel
+  const [wallet, setWallet] = useState<WalletState>({
+    account: null,
+    chainId: null,
+    provider: null,
+  });
 
-  async function onConnected(s: Signer, label: "Injected" | "WalletConnect") {
-    setSigner(s);
-    setVia(label);
-    setWho(await s.getAddress());
-  }
+  // optional: hydrate if already connected
+  useEffect(() => {
+    const eth = (window as any).ethereum;
+    if (!eth) return;
+    (async () => {
+      try {
+        const [accounts, chainId] = await Promise.all([
+          eth.request({ method: "eth_accounts" }),
+          eth.request({ method: "eth_chainId" }),
+        ]);
+        setWallet((w) => ({
+          ...w,
+          account: accounts?.[0] ?? null,
+          chainId: chainId ?? null,
+        }));
+      } catch {}
+    })();
+  }, []);
 
   return (
-    <main className="max-w-2xl mx-auto p-6">
-      <header className="mb-6">
-        <h1 className="text-2xl font-bold">Proofmint</h1>
-        {who ? (
-          <p className="text-sm text-gray-600 break-all">Connected ({via}): <span className="font-mono">{who}</span></p>
-        ) : <p className="text-sm text-gray-600">Not connected</p>}
+    <main className="max-w-3xl mx-auto p-6 space-y-6">
+      <header className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold">Proofmint Demo</h1>
+        <ConnectButtons onConnected={setWallet} />
       </header>
 
-      <ConnectButtons onConnected={onConnected} />
-      <BuyForm signer={signer} onPurchased={() => setTick(t => t + 1)} />
-      <StatePanel key={tick} />
-      <footer style={{ marginTop: "2rem", fontSize: "0.9em", color: "#666" }}>
-        🚀 Proofmint frontend running — dev build active
-      </footer>
+      {/* Sale state (reads via FALLBACK_RPC or wallet) */}
+      <StatePanel />
 
+      {/* Actions (need a connected provider) */}
+      <BuyForm provider={wallet.provider} onPurchased={() => {/* optional: trigger a refresh elsewhere */}} />
+      <Withdraw provider={wallet.provider} onAfterTx={() => {/* optional */}} />
+
+      <footer className="text-xs text-gray-500 pt-4">
+        Connected: {wallet.account ?? "not connected"}
+      </footer>
     </main>
   );
 }

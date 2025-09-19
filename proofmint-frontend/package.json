@@ -4,10 +4,14 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "sync:deployments": "mkdir -p src/addresses && cp -f ../proofmint/deployments/sepolia.json src/addresses/sepolia.json",
     "dev": "vite",
-    "build": "vite build",
+    "build": "npm run sync:deployments && vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "sync:deployments:local": "mkdir -p src/addresses && cp -f ../proofmint/deployments/localhost.json src/addresses/sepolia.json",
+    "dev:local": "npm run sync:deployments:local && vite",
+    "dev:sepolia": "npm run sync:deployments && vite --mode sepolia"
   },
   "dependencies": {
     "@walletconnect/ethereum-provider": "^2.21.8",
