@@ -29,7 +29,6 @@
     "deploy:anvil": "hardhat run scripts/deploy.ts --network anvil",
     "deploy:sepolia": "hardhat run scripts/deploy.ts --network sepolia",
     "show:sepolia": "jq -r 'to_entries[] | \"\\(.key): \\(.value)\"' deployments/sepolia.json",
-    "buy:sepolia:ts": "hardhat run scripts/buy.ts --network sepolia",
     "withdraw:sepolia:ts": "hardhat run scripts/withdraw.ts --network sepolia",
     "deploy:sepolia:ts": "hardhat run scripts/deploy.ts --network sepolia"
   },

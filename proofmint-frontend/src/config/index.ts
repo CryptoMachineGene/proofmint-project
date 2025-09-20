@@ -29,3 +29,8 @@ export const NETWORK = {
   chainIdHex: CHAIN_ID_HEX,
   name: "Sepolia",
 };
+
+// Debug log (remove or comment out later)
+console.log("[Config] Crowdsale:", CROWDSALE_ADDRESS);
+console.log("[Config] Token:", TOKEN_ADDRESS);
+console.log("[Config] NFT:", NFT_ADDRESS);
