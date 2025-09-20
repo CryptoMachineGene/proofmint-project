@@ -6,4 +6,3 @@ proofmint-frontend/.env.local
 # envs
 .env*
 !.env.example
-
