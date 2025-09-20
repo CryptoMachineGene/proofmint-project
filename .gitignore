@@ -6,4 +6,4 @@ proofmint-frontend/.env.local
 # envs
 .env*
 !.env.example
-node_modules/
+
