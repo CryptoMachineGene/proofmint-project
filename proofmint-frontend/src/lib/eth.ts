@@ -1,310 +1,171 @@
-// proofmint-frontend/src/lib/eth.ts
-import { ethers } from "ethers";
-import EthereumProvider from "@walletconnect/ethereum-provider";
 import {
-  CHAIN_ID, CHAIN_ID_HEX_STR,
-  CROWDSALE_ADDR, NFT_ADDR, FALLBACK_RPC, WC_PROJECT_ID
+  BrowserProvider,
+  JsonRpcProvider,
+  Contract,
+  parseEther,
+  formatEther,
+} from "ethers";
+import {
+  NETWORK,
+  CHAIN_ID,
+  CHAIN_ID_HEX, 
+  FALLBACK_RPC,
+  CROWDSALE_ADDRESS,
+  TOKEN_ADDRESS,
+  NFT_ADDRESS, // (not used here but exported in case you need it)
 } from "../config";
 
-
-// -------------------------------
-// NFT mint count via logs
-// -------------------------------
-const NFT_DEPLOY_BLOCK = 9007802n;
-
-// count mints by querying Transfer(from=0x0, any to, any tokenId) in small block chunks
-async function mintedViaLogs(): Promise<bigint> {
-  const provider =
-    getReadonly() ??
-    injectedProvider ??
-    wcEthersProvider;
-
-  if (!provider) throw new Error("No provider available for logs.");
-  if (!NFT_ADDR) throw new Error("NFT address not set.");
-
-  // keep chunks comfortably under free-tier limits
-  const STEP = 80; // blocks per query (tweak if needed)
-
-  // v6 providers return number for getBlockNumber()
-  const latest = Number(await (provider as any).getBlockNumber?.() ?? 0);
-  const start  = Number(NFT_DEPLOY_BLOCK);
-
-  if (!Number.isFinite(latest) || latest <= 0 || latest < start) {
-    throw new Error(`Invalid block range for logs: start=${start}, latest=${latest}`);
-  }
-
-  let total = 0n;
-  const fromTopic = ethers.zeroPadValue(ZERO_ADDR, 32);
-
-  for (let from = start; from <= latest; from += STEP) {
-    const to = Math.min(from + STEP - 1, latest);
-
-    const filter = {
-      address: NFT_ADDR,
-      fromBlock: from,
-      toBlock: to,
-      topics: [TRANSFER_TOPIC, fromTopic, null, null],
-    } as any;
-
-    try {
-      const logs = await (provider as any).getLogs(filter);
-      total += BigInt(logs.length);
-    } catch (e: any) {
-      console.warn(`mintedViaLogs: window ${from}-${to} failed:`, e?.message ?? e);
-      throw e;
-    }
-  }
-
-  return total;
-}
-
-// -------------------------------
-// Minimal ABIs (adjust if names differ)
-// -------------------------------
+// Minimal ABIs used by the UI (inline to avoid path issues)
 const CROWDSALE_ABI = [
-  "function buy() payable",
-  "function buyTokens() payable",
+  "function withdraw()",
   "function rate() view returns (uint256)",
   "function cap() view returns (uint256)",
   "function weiRaised() view returns (uint256)",
+  // If your sale *requires* a payable function instead of raw ETH send:
+  // "function buyTokens() payable"
 ];
-const NFT_ABI = [
-  "function totalSupply() view returns (uint256)",
+
+const ERC20_ABI = [
+  "function decimals() view returns (uint8)",
+  "function balanceOf(address) view returns (uint256)",
+  "function symbol() view returns (string)",
 ];
 
-// -------------------------------
-// Wallet plumbing
-// -------------------------------
-export type WalletKind = "Injected" | "WalletConnect";
+export type WalletState = {
+  account: string | null;
+  chainId: string | null; // hex
+  provider: BrowserProvider | null;
+};
 
-let injectedProvider: ethers.BrowserProvider | null = null;
-let wcProvider: any | null = null;
-let wcEthersProvider: ethers.BrowserProvider | null = null;
+export type SaleState = {
+  capEth: string | null;
+  raisedEth: string | null;
+  rate: string | null;
+  userToken: string | null;
+  tokenSym: string | null;
+  balanceEth: string | null; 
+};
 
-// read-only provider if no wallet (lazy)
-let _readonlyProvider: ethers.JsonRpcProvider | null = null;
 
-function getReadonly(): ethers.JsonRpcProvider | null {
+// ---------- providers ----------
+let injected: BrowserProvider | null = null;
+let readonlyRpc: JsonRpcProvider | null = null;
+
+function getReadonly(): JsonRpcProvider | null {
   if (!FALLBACK_RPC || !/^https?:\/\//i.test(FALLBACK_RPC)) return null;
-  if (!_readonlyProvider) {
+  if (!readonlyRpc) {
     try {
-      _readonlyProvider = new ethers.JsonRpcProvider(FALLBACK_RPC, CHAIN_ID);
+      readonlyRpc = new JsonRpcProvider(FALLBACK_RPC, CHAIN_ID);
     } catch {
-      _readonlyProvider = null; // invalid / unreachable URL
+      readonlyRpc = null;
     }
   }
-  return _readonlyProvider;
+  return readonlyRpc;
 }
 
 export const hasInjected = () =>
   typeof window !== "undefined" && (window as any).ethereum;
 
-export async function connectInjected(): Promise<ethers.Signer> {
+// ---------- connect ----------
+export async function connectInjected(): Promise<WalletState> {
   if (!hasInjected()) throw new Error("No injected wallet found.");
-  injectedProvider = new ethers.BrowserProvider((window as any).ethereum);
-  await injectedProvider.send("eth_requestAccounts", []);
-  const net = await injectedProvider.getNetwork();
+  injected = new BrowserProvider((window as any).ethereum);
+  const accounts: string[] = await injected.send("eth_requestAccounts", []);
+  const net = await injected.getNetwork();
+  const chainIdHex = "0x" + Number(net.chainId).toString(16);
+
   if (Number(net.chainId) !== CHAIN_ID) {
     await (window as any).ethereum.request({
       method: "wallet_switchEthereumChain",
-      params: [{ chainId: CHAIN_ID_HEX_STR }],
+      params: [{ chainId: CHAIN_ID_HEX }],
     });
   }
-  return injectedProvider.getSigner();
-}
-
-export async function connectWalletConnect(): Promise<ethers.Signer> {
-  if (!WC_PROJECT_ID) throw new Error("Missing WalletConnect project id.");
-  if (!wcProvider) {
-    wcProvider = await EthereumProvider.init({
-      projectId: WC_PROJECT_ID,
-      chains: [CHAIN_ID],
-      optionalChains: [CHAIN_ID],
-      showQrModal: true,
-      metadata: {
-        name: "Proofmint",
-        description: "Proofmint dApp",
-        url: "https://example.org",
-        icons: [],
-      },
-    });
-  }
-  await wcProvider.enable();
-  wcEthersProvider = new ethers.BrowserProvider(wcProvider);
-  return wcEthersProvider.getSigner();
-}
-
-function pickProvider(p?: ethers.Signer | ethers.Provider) {
-  if (p) return p;
-  if (injectedProvider) return injectedProvider;
-  if (wcEthersProvider) return wcEthersProvider;
-  const ro = getReadonly();
-  if (ro) return ro;
-
-  throw new Error("No provider available (connect a wallet or set VITE_FALLBACK_RPC).");
-}
-
-// -------------------------------
-// Contracts
-// -------------------------------
-export async function getCrowdsaleContract(p?: ethers.Signer | ethers.Provider) {
-  if (!CROWDSALE_ADDR) throw new Error("Crowdsale address not set.");
-  return new ethers.Contract(CROWDSALE_ADDR, CROWDSALE_ABI, pickProvider(p));
-}
-
-export async function getNftContract(p?: ethers.Signer | ethers.Provider) {
-  if (!NFT_ADDR) throw new Error("NFT address not set.");
-  return new ethers.Contract(NFT_ADDR, NFT_ABI, pickProvider(p));
-}
-
-// -------------------------------
-// BUY flow (tries common function names, falls back to raw send)
-// -------------------------------
-const BUY_FN_CANDIDATES = [
-  "buy",
-  "buyTokens",
-  "purchase",
-  "contribute",
-  "mint",          // some sales/NFTs mint on payable
-  "mintPublic",    // common in NFT mints
-];
-
-function bestErr(e: any) {
-  return e?.shortMessage || e?.info?.error?.message || e?.cause?.reason || e?.message || String(e);
-}
-
-export async function buyTokensSmart(ethAmount: string, signer?: ethers.Signer) {
-  if (!signer) throw new Error("Connect a wallet first.");
-  const sale = await getCrowdsaleContract(signer);
-  const value = ethers.parseEther(ethAmount);
-
-  for (const fn of BUY_FN_CANDIDATES) {
-    try {
-      const candidate = (sale as any)[fn];
-      if (typeof candidate !== "function") continue;
-
-      // Dry-run first: static call (no prompt, clean error surface)
-      if ((sale as any)[fn].staticCall) {
-        await (sale as any)[fn].staticCall({ value });
-      } else {
-        // ethers v6 canonical path
-        await sale.getFunction(fn).staticCall({ value });
-      }
-
-      // If static call passed, send the real tx
-      const tx = await (sale as any)[fn]({ value });
-      return tx.wait();
-    } catch {
-      // try next candidate
-    }
-  }
-
-  // Last resort: payable receive()
-  try {
-    const tx = await signer.sendTransaction({ to: CROWDSALE_ADDR, value });
-    return tx.wait();
-  } catch (e: any) {
-    throw new Error(
-      "Purchase failed: no working buy function found (or sale conditions not met). " +
-      bestErr(e)
-    );
-  }
-}
-
-// -------------------------------
-// Simple sale-state reader (matches our working `cast call`s)
-// -------------------------------
-import { ethers } from "ethers";
-// ... your other imports (env, abis, addrs)
-
-import { ethers } from "ethers";
-// FALLBACK_RPC should already be set from .env.local
-
-export async function fetchSaleState() {
-  // Always use RPC for reads (more consistent than injected)
-  const rpc = new ethers.JsonRpcProvider(FALLBACK_RPC);
-
-  const sale = new ethers.Contract(CROWDSALE_ADDR, CROWDSALE_ABI, rpc);
-  const saleAddr = await sale.getAddress();
-
-  // Nudge provider to latest head (helps some RPCs)
-  await rpc.getBlockNumber();
-
-  const [rateRaw, capRaw, raisedRaw, balanceRaw] = await Promise.all([
-    sale.rate(),
-    sale.cap(),
-    sale.weiRaised(),
-    rpc.getBalance(saleAddr), // current contract balance
-  ]);
 
   return {
-    rate: ethers.formatUnits(rateRaw, 18),
-    capEth: ethers.formatEther(capRaw),
-    raisedEth: ethers.formatEther(raisedRaw),
-    balanceEth: ethers.formatEther(balanceRaw),
+    account: accounts[0] ?? null,
+    chainId: chainIdHex,
+    provider: injected,
   };
 }
 
-// -------------------------------
-// Helper: try a list of candidate getter names (kept if you use elsewhere)
-// -------------------------------
-async function tryGet<T = any>(obj: any, names: string[]): Promise<{name: string; value: T | null}> {
-  for (const n of names) {
-    try {
-      if (typeof obj[n] === "function") {
-        const v = await obj[n]();
-        return { name: n, value: v };
-      }
-    } catch { /* keep trying */ }
-  }
-  return { name: "", value: null };
+// ---------- contracts ----------
+function getContracts(provider: BrowserProvider | JsonRpcProvider) {
+  if (!CROWDSALE_ADDRESS) throw new Error("Crowdsale address not set in .env.local");
+  const crowdsale = new Contract(CROWDSALE_ADDRESS, CROWDSALE_ABI, provider);
+  const token = TOKEN_ADDRESS ? new Contract(TOKEN_ADDRESS, ERC20_ABI, provider) : null;
+  return { crowdsale, token };
 }
 
+// ---------- actions ----------
 
-// -------------------------------
-// Dashboard/state aggregator (fixed braces)
-// -------------------------------
+// Direct send first; if wallet rejects or contract needs a method, try buyTokens()
+export async function buyWithAuto(provider: BrowserProvider, ethAmount: string) {
+  const signer = await provider.getSigner();
+  if (!CROWDSALE_ADDRESS) throw new Error("Crowdsale address not set.");
+  const value = parseEther(ethAmount);
 
-export async function readState() {
-  const sale = await getCrowdsaleContract();
-
-  const [rate, cap, weiRaised] = await Promise.all([
-    withTimeout(sale.rate(),      5_000, "rate()"),
-    withTimeout(sale.cap(),       5_000, "cap()"),
-    withTimeout(sale.weiRaised(), 5_000, "weiRaised()"),
-  ]);
-
-
-  // minted via logs (fallback that works even if totalSupply() reverts)
-  let mintedBI: bigint | null = null;
+  // try plain ETH send to the sale
   try {
-    const ts = await nft.totalSupply();
-    mintedBI = BigInt(ts.toString());
-  } catch (e1) {
-    try {
-      mintedBI = await mintedViaLogs();
-    } catch (e2) {
-      console.warn("minted read failed (logs + totalSupply):", e1, e2);
-      mintedBI = null;
+    const tx = await signer.sendTransaction({ to: CROWDSALE_ADDRESS, value });
+    return tx; // return tx so UI can read tx.hash, then await tx.wait() itself
+  } catch (e) {
+    // fallback to explicit payable function, if present
+    const sale = new Contract(CROWDSALE_ADDRESS, CROWDSALE_ABI, signer) as any;
+    if (typeof sale.buyTokens === "function") {
+      const tx = await sale.buyTokens({ value });
+      return tx;
     }
+    throw e;
   }
-
-
-  // normalize to strings
-  const rateStr    = BigInt(rate.toString()).toString();
-  const capWei     = BigInt(cap.toString());
-  const raisedWei  = BigInt(weiRaised.toString());
-  const remaining  = capWei > raisedWei ? capWei - raisedWei : 0n;
-
-  return {
-    rate: rateStr,                       // <- string
-    cap: capWei.toString(),
-    weiRaised: raisedWei.toString(),
-    nftsMinted: mintedStr,               // <- string or "N/A"
-    capRemainingWei: remaining.toString()
-  };
 }
 
-// -------------------------------
-export const usingFallbackRPC = !!FALLBACK_RPC;
-export async function readDashboard() { return readState(); }
+// Back-compat: allow components still importing buyETH to work
+export const buyETH = buyWithAuto;
+
+export async function withdrawRaised(provider: BrowserProvider) {
+  const signer = await provider.getSigner();
+  const { crowdsale } = getContracts(provider);
+  const tx = await crowdsale.connect(signer).withdraw();
+  return tx; // return tx (UI can call tx.wait() and show hash immediately)
+}
+
+export async function fetchSaleState(
+  provider?: BrowserProvider,
+  account?: string | null
+): Promise<SaleState> {
+  const ro = getReadonly() ?? provider ?? injected;
+  if (!ro) throw new Error("No provider available (connect a wallet or set FALLBACK_RPC).");
+
+  const { crowdsale, token } = getContracts(ro);
+
+  let capEth: string | null = null;
+  let raisedEth: string | null = null;
+  let rate: string | null = null;
+  let balanceEth: string | null = null; // 👈 NEW
+
+  try { capEth = formatEther(await crowdsale.cap()); } catch {}
+  try { raisedEth = formatEther(await crowdsale.weiRaised()); } catch {}
+  try { rate = (await crowdsale.rate()).toString(); } catch {}
+
+  // 👇 NEW: current ETH balance on the sale contract
+  try {
+    const saleAddr = await crowdsale.getAddress();
+    const bal = await ro.getBalance(saleAddr);
+    balanceEth = formatEther(bal);
+  } catch {}
+
+  let userToken: string | null = null;
+  let tokenSym: string | null = null;
+  if (token && account) {
+    try {
+      const [bal, sym, dec] = await Promise.all([
+        token.balanceOf(account), token.symbol(), token.decimals(),
+      ]);
+      tokenSym = sym;
+      userToken = (Number(bal) / 10 ** Number(dec)).toString();
+    } catch {}
+  }
+
+  return { capEth, raisedEth, rate, userToken, tokenSym, balanceEth };
+}
+
