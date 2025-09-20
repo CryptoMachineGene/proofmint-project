@@ -1,11 +1,15 @@
+// src/components/BuyForm.tsx
 import { useState } from "react";
-import type { Signer } from "ethers";
-import { buyTokensSmart } from "../lib/eth";
+import type { BrowserProvider } from "ethers";
+import { buyWithAuto } from "../lib/eth"; // <- uses the auto fallback path we added
 import Toast from "./ui/Toast";
 
-type Props = { signer?: Signer | null; onPurchased?: () => void };
+type Props = {
+  provider?: BrowserProvider | null;
+  onPurchased?: () => void;
+};
 
-export default function BuyForm({ signer, onPurchased }: Props) {
+export default function BuyForm({ provider, onPurchased }: Props) {
   const [ethAmount, setEthAmount] = useState<string>("0.01");
   const [busy, setBusy] = useState(false);
   const [toast, setToast] = useState<{ kind: "success" | "error"; text: string } | null>(null);
@@ -14,18 +18,29 @@ export default function BuyForm({ signer, onPurchased }: Props) {
     <span className="inline-block h-4 w-4 border-2 border-current border-t-transparent rounded-full animate-spin align-[-2px] mr-2" />
   );
 
+  const clean = (s: string) => s.replace(",", ".").trim();
+
   async function onBuy() {
-    setBusy(true);
     try {
-      if (!signer) throw new Error("Connect a wallet first.");
-      if (!ethAmount || Number(ethAmount) <= 0) throw new Error("Enter a positive amount.");
+      setBusy(true);
+      setToast(null);
 
-      // send tx and wait for confirmation
-      const receipt = await buyTokensSmart(ethAmount, signer);
-      const hash = (receipt as any)?.hash ?? (receipt as any)?.transactionHash ?? "";
-      setToast({ kind: "success", text: `Success! Tx ${String(hash).slice(0, 10)}…` });
+      if (!provider) throw new Error("Connect a wallet first.");
+      const amt = clean(ethAmount);
+      if (!amt || Number(amt) <= 0) throw new Error("Enter a positive amount.");
 
-      // ask parent to refresh sale state
+      // send tx (auto: try direct ETH, fallback to buyTokens())
+      const tx = await buyWithAuto(provider, amt);
+
+      // open Etherscan in a new tab immediately
+      const href = `https://sepolia.etherscan.io/tx/${tx.hash}`;
+      window.open(href, "_blank");
+
+      // optimistic toast, then confirm
+      setToast({ kind: "success", text: `Tx sent: ${tx.hash.slice(0, 10)}… (opens Etherscan)` });
+      await tx.wait();
+      setToast({ kind: "success", text: `Success: ${tx.hash.slice(0, 10)}…` });
+
       onPurchased?.();
     } catch (e: any) {
       const msg =
@@ -34,11 +49,15 @@ export default function BuyForm({ signer, onPurchased }: Props) {
         e?.cause?.reason ||
         e?.message ||
         String(e);
-      // common helpful hints
-      if (/chain|network/i.test(msg)) {
-        setToast({ kind: "error", text: "Wrong network. Switch wallet to Sepolia and try again." });
+
+      if (/user rejected|denied/i.test(msg)) {
+        setToast({ kind: "error", text: "Action canceled." });
       } else if (/insufficient funds/i.test(msg)) {
-        setToast({ kind: "error", text: "Insufficient funds for value + gas." });
+        setToast({ kind: "error", text: "Insufficient funds. Top up Sepolia ETH." });
+      } else if (/chain|network|wrong network|unsupported/i.test(msg)) {
+        setToast({ kind: "error", text: "Please switch to Sepolia to continue." });
+      } else if (/amount|value/i.test(msg)) {
+        setToast({ kind: "error", text: "Invalid amount. Try a small positive value (e.g., 0.01)." });
       } else {
         setToast({ kind: "error", text: msg });
       }
@@ -57,17 +76,27 @@ export default function BuyForm({ signer, onPurchased }: Props) {
             value={ethAmount}
             onChange={(e) => setEthAmount(e.target.value.replace(",", "."))}
             type="number"
+            inputMode="decimal"
             min="0"
             step="0.0001"
-            placeholder="0.001"
+            placeholder="0.01"
             className="w-full border rounded-xl px-3 py-2"
           />
         </label>
-        <button onClick={onBuy} disabled={busy || !signer} className="px-4 py-2 rounded-xl shadow border disabled:opacity-50">
+        <button
+          onClick={onBuy}
+          disabled={busy || !provider}
+          className="px-4 py-2 rounded-xl shadow border disabled:opacity-50"
+          title={!provider ? "Connect a wallet" : undefined}
+        >
           {busy && <Spinner />}Buy
         </button>
       </div>
-      {!signer && <p className="text-sm text-gray-500 mt-2">Connect a wallet to enable buying.</p>}
+
+      {!provider && (
+        <p className="text-sm text-gray-500 mt-2">Connect a wallet to enable buying.</p>
+      )}
+
       {toast && <Toast kind={toast.kind} text={toast.text} onClose={() => setToast(null)} />}
     </section>
   );
