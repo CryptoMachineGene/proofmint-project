@@ -6,3 +6,8 @@ proofmint-frontend/.env.local
 # envs
 .env*
 !.env.example
+<<<<<<< HEAD
+
+=======
+>>>>>>> 2a163e7 (frontend: lock Sepolia, guarded Withdraw, buyWithAuto; cleanup .env.local ignores)
+node_modules/

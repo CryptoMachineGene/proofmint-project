@@ -9,9 +9,10 @@ type SaleState = {
   balanceEth?: string | null;  // current
 };
 
-const fmt = (v?: string | null, d = "—") => {
-  if (v === undefined || v === null || v === "") return d;
-  const n = Number(v);
+// zero-safe formatter: only hides when null/undefined, not when value is "0"
+const fmt = (v: string | number | null | undefined, d = "—") => {
+  if (v === null || v === undefined) return d;
+  const n = typeof v === "number" ? v : Number(v);
   return Number.isFinite(n)
     ? n.toLocaleString(undefined, { maximumFractionDigits: 6 })
     : d;
@@ -69,7 +70,7 @@ export default function StatePanel({ autoRefreshMs = 25_000 }: { autoRefreshMs?:
         <div>Loading…</div>
       ) : sale ? (
         <ul className="space-y-1">
-          <li>Rate: {fmt(sale.rate)} tokens per ETH</li>
+          <li>Rate: {fmt(sale.rate)}{sale.tokenSym ? ` ${sale.tokenSym}` : ""} per ETH</li>
           <li>Cap: {fmt(sale.capEth)} ETH</li>
           <li>Raised (lifetime): {fmt(sale.raisedEth)} ETH</li>
           <li>Balance (current): {fmt(sale.balanceEth)} ETH</li>

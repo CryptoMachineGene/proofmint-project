@@ -4,6 +4,7 @@ import {
   Contract,
   parseEther,
   formatEther,
+  formatUnits,   
 } from "ethers";
 import {
   NETWORK,
@@ -140,29 +141,60 @@ export async function fetchSaleState(
 
   let capEth: string | null = null;
   let raisedEth: string | null = null;
-  let rate: string | null = null;
-  let balanceEth: string | null = null; // 👈 NEW
-
-  try { capEth = formatEther(await crowdsale.cap()); } catch {}
-  try { raisedEth = formatEther(await crowdsale.weiRaised()); } catch {}
-  try { rate = (await crowdsale.rate()).toString(); } catch {}
-
-  // 👇 NEW: current ETH balance on the sale contract
-  try {
-    const saleAddr = await crowdsale.getAddress();
-    const bal = await ro.getBalance(saleAddr);
-    balanceEth = formatEther(bal);
-  } catch {}
-
+  let rate: string | null = null;          // human: tokens per ETH
+  let balanceEth: string | null = null;    // ETH held by the sale
   let userToken: string | null = null;
   let tokenSym: string | null = null;
+
+  // Cap / Raised
+  try { capEth = formatEther(await crowdsale.cap()); } catch {}
+  try { raisedEth = formatEther(await crowdsale.weiRaised()); } catch {}
+
+  // ---- RATE (human): tokens per ETH (auto-detect per-wei vs per-ETH) ----
+  try {
+    const rateRaw: bigint = await crowdsale.rate(); // token UNITS per ? (wei or ETH)
+    if (TOKEN_ADDRESS) {
+      const t = new Contract(TOKEN_ADDRESS, ERC20_ABI, ro);
+      const [dec, sym] = await Promise.all([t.decimals(), t.symbol()]);
+      tokenSym = sym;
+
+      const pow18 = 10n ** 18n;
+      const perEth_ifPerWei = Number(formatUnits(rateRaw * pow18, dec)); // if per WEI
+      const perEth_ifPerEth = Number(formatUnits(rateRaw, dec));         // if per ETH
+      const chosen = perEth_ifPerWei >= 1e12 ? perEth_ifPerEth : perEth_ifPerWei;
+
+      rate = Number.isFinite(chosen) ? String(chosen) : null;
+    } else {
+      rate = rateRaw.toString();
+    }
+  } catch {}
+
+  // ---- SALE ETH BALANCE (zero-safe with fallback) ----
+  try {
+    const saleAddr = await crowdsale.getAddress();
+    const bal = await ro.getBalance(saleAddr);              // works for BrowserProvider & JsonRpcProvider
+    balanceEth = formatEther(bal ?? 0n);
+  } catch {
+    try {
+      const rpc = getReadonly();
+      const saleAddr = await crowdsale.getAddress();
+      const bal2 = rpc ? await rpc.getBalance(saleAddr) : 0n;
+      balanceEth = formatEther(bal2);
+    } catch {
+      balanceEth = "0"; // last resort: show 0 instead of "—"
+    }
+  }
+
+  // ---- USER TOKEN BALANCE (optional; only if connected + TOKEN_ADDRESS) ----
   if (token && account) {
     try {
-      const [bal, sym, dec] = await Promise.all([
-        token.balanceOf(account), token.symbol(), token.decimals(),
+      const [raw, sym, dec] = await Promise.all([
+        token.balanceOf(account),
+        token.symbol(),
+        token.decimals(),
       ]);
-      tokenSym = sym;
-      userToken = (Number(bal) / 10 ** Number(dec)).toString();
+      tokenSym = tokenSym ?? sym;
+      userToken = (Number(raw) / 10 ** Number(dec)).toString();
     } catch {}
   }
 

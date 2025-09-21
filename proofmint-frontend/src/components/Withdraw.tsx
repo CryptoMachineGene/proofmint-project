@@ -1,3 +1,4 @@
+// proofmint-frontend/src/components/Withdraw.tsx
 import { useEffect, useState } from "react";
 import type { BrowserProvider } from "ethers";
 import { Contract } from "ethers";
@@ -7,52 +8,58 @@ import Toast from "./ui/Toast";
 
 const OWNABLE_ABI = ["function owner() view returns (address)"];
 
-export default function Withdraw({ provider }: { provider?: BrowserProvider | null }) {
+type Props = { provider?: BrowserProvider | null; onWithdrew?: () => void };
+
+export default function Withdraw({ provider, onWithdrew }: Props) {
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
+  const [txHash, setTxHash] = useState<string | null>(null);
   const [isOwner, setIsOwner] = useState(false);
   const [connected, setConnected] = useState(false);
 
   useEffect(() => {
+    let cancelled = false;
     (async () => {
       try {
-        if (!provider) {
-          setConnected(false);
-          setIsOwner(false);
+        if (!provider || !CROWDSALE_ADDRESS) {
+          if (!cancelled) { setConnected(false); setIsOwner(false); }
           return;
         }
-        setConnected(true);
-
         const signer = await provider.getSigner();
         const me = (await signer.getAddress()).toLowerCase();
         const ownable = new Contract(CROWDSALE_ADDRESS, OWNABLE_ABI, provider);
-        const owner = (await ownable.owner()).toLowerCase();
-        setIsOwner(me === owner);
+        const owner = ((await ownable.owner()) as string).toLowerCase();
+        if (!cancelled) { setConnected(true); setIsOwner(me === owner); }
       } catch {
-        setConnected(false);
-        setIsOwner(false);
+        if (!cancelled) { setConnected(false); setIsOwner(false); }
       }
     })();
+    return () => { cancelled = true; };
   }, [provider]);
 
-  // Hide everything if not connected or not owner
+  // Hide if not connected or not owner
   if (!connected || !isOwner) return null;
 
   const onWithdraw = async () => {
     if (!provider || busy) return;
-    setBusy(true);
-    setMsg(null);
     try {
+      setBusy(true);
+      setMsg("Sending withdraw…");
       const tx = await withdrawRaised(provider);
-      setMsg(`Withdrawing… ${tx.hash.slice(0, 10)}…`);
+      setTxHash(tx.hash);
+      setMsg(`Tx sent: ${tx.hash.slice(0, 10)}…`);
       window.open(`https://sepolia.etherscan.io/tx/${tx.hash}`, "_blank");
       await tx.wait();
-      setMsg(`Success: ${tx.hash.slice(0, 10)}…`);
+      setMsg("Withdraw confirmed ✅");
+      onWithdrew?.(); // let parent refresh state
     } catch (e: any) {
-      const m = (e?.message || "").toLowerCase();
-      if (m.includes("user rejected")) setMsg("Action canceled.");
-      else if (m.includes("insufficient funds")) setMsg("Insufficient funds for gas.");
-      else setMsg("Withdraw failed. Check owner wallet & Sepolia.");
+      const m = String(e?.shortMessage || e?.message || e || "");
+      const human =
+        /user rejected/i.test(m) ? "Action canceled." :
+        /insufficient funds/i.test(m) ? "Insufficient funds for gas." :
+        /wrong network|unsupported chain|chain id/i.test(m) ? "Switch to Sepolia (11155111)." :
+        "Withdraw failed. Check owner wallet & Sepolia.";
+      setMsg(human);
     } finally {
       setBusy(false);
     }
