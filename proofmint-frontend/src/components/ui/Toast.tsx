@@ -1,4 +1,11 @@
+<<<<<<< HEAD
 import { useEffect, useRef, useState } from "react";
+
+type Kind = "info" | "success" | "error";
+=======
+// src/components/ui/Toast.tsx
+import { useEffect } from "react";
+>>>>>>> origin/main
 
 type Kind = "info" | "success" | "error";
 
@@ -21,6 +28,7 @@ export default function Toast({
 }: Props) {
   const body = text ?? message ?? "";
   if (!body) return null;
+<<<<<<< HEAD
 
   // --- Hover pause logic ---
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -102,6 +110,29 @@ export default function Toast({
         >
           ×
         </button>
+=======
+
+  useEffect(() => {
+    const t = setTimeout(() => onClose?.(), durationMs);
+    return () => clearTimeout(t);
+  }, [onClose, durationMs]);
+
+  const base = "fixed top-4 right-4 z-50 px-4 py-3 rounded-xl shadow-lg text-sm";
+  const tone =
+    kind === "error"   ? "bg-red-600 text-white"   :
+    kind === "success" ? "bg-green-600 text-white" :
+                          "bg-gray-800 text-white"; // info
+
+  return (
+    <div className={`${base} ${tone}`}>
+      {body}
+      {href && (
+        <>
+          {" "}<a className="underline" href={href} target="_blank" rel="noreferrer">
+            Etherscan
+          </a>
+        </>
+>>>>>>> origin/main
       )}
     </div>
   );

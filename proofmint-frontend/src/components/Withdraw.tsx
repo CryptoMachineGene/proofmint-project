@@ -43,6 +43,7 @@ export default function Withdraw({ provider, onWithdrew }: Props) {
   // Hide entirely if not connected or not owner
   if (!connected || !isOwner) return null;
 
+<<<<<<< HEAD
   const onWithdraw = async () => {
     if (!provider || busy) return;
     try {
@@ -77,6 +78,38 @@ export default function Withdraw({ provider, onWithdrew }: Props) {
       setBusy(false);
     }
   };
+=======
+const onWithdraw = async () => {
+  if (!provider || busy) return;
+  try {
+    setBusy(true);
+    setMsg("Sending withdraw…");
+
+    const tx = await withdrawRaised(provider);
+    setTxHash(tx.hash);
+    setMsg(`Tx sent: ${tx.hash.slice(0, 10)}… (waiting)`);
+
+    // ✅ wait for confirmation before opening Etherscan
+    await tx.wait();
+
+    const href = `https://sepolia.etherscan.io/tx/${tx.hash}`;
+    setMsg("Withdraw confirmed ✅");
+    window.open(href, "_blank");
+
+    onWithdrew?.(); // refresh state in parent
+  } catch (e: any) {
+    const m = String(e?.shortMessage || e?.message || e || "");
+    const human =
+      /user rejected/i.test(m) ? "Action canceled." :
+      /insufficient funds/i.test(m) ? "Insufficient funds for gas." :
+      /wrong network|unsupported chain|chain id/i.test(m) ? "Switch to Sepolia (11155111)." :
+      "Withdraw failed. Check owner wallet & Sepolia.";
+    setMsg(human);
+  } finally {
+    setBusy(false);
+  }
+};
+>>>>>>> origin/main
 
   return (
     <section className="bg-white rounded-2xl shadow p-5 space-y-3">
@@ -90,6 +123,7 @@ export default function Withdraw({ provider, onWithdrew }: Props) {
           {busy ? "Withdrawing…" : "Withdraw"}
         </button>
       </div>
+<<<<<<< HEAD
 
       {toast && (
         <Toast
@@ -97,6 +131,18 @@ export default function Withdraw({ provider, onWithdrew }: Props) {
           text={toast.text}
           href={toast.href}
           onClose={() => setToast(null)}
+=======
+      {msg && (
+        <Toast
+          message={msg}
+          kind={/failed|insufficient|switch/i.test(msg)
+            ? "error"
+            : /confirmed|success/i.test(msg)
+            ? "success"
+            : "info"}
+          href={txHash ? `https://sepolia.etherscan.io/tx/${txHash}` : undefined}
+          autoHideMs={5000} // optional
+>>>>>>> origin/main
         />
       )}
     </section>
