@@ -1,5 +1,6 @@
 // src/components/StatePanel.tsx
 import React, { useState, useEffect } from "react";
+import type { BrowserProvider } from "ethers";
 import { fetchSaleState } from "../lib/eth";
 
 type SaleState = {
@@ -7,9 +8,11 @@ type SaleState = {
   capEth?: string | null;
   raisedEth?: string | null;   // lifetime
   balanceEth?: string | null;  // current
+  tokenSym?: string | null;
+  userToken?: string | null;
 };
 
-// zero-safe formatter: only hides when null/undefined, not when value is "0"
+// zero-safe formatter
 const fmt = (v: string | number | null | undefined, d = "—") => {
   if (v === null || v === undefined) return d;
   const n = typeof v === "number" ? v : Number(v);
@@ -18,7 +21,17 @@ const fmt = (v: string | number | null | undefined, d = "—") => {
     : d;
 };
 
-export default function StatePanel({ autoRefreshMs = 25_000 }: { autoRefreshMs?: number }) {
+export default function StatePanel({
+  provider,
+  account,
+  autoRefreshMs = 25_000,
+  refreshSignal = 0,
+}: {
+  provider?: BrowserProvider | null;
+  account?: string | null;
+  autoRefreshMs?: number;
+  refreshSignal?: number; // ⬅️ add this
+}) {
   const [sale, setSale] = useState<SaleState | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -27,10 +40,9 @@ export default function StatePanel({ autoRefreshMs = 25_000 }: { autoRefreshMs?:
     setLoading(true);
     setError(null);
     try {
-      const s = await fetchSaleState();
+      const s = await fetchSaleState(provider ?? undefined, account ?? undefined);
       setSale(s);
     } catch (e: any) {
-      console.error("refresh error:", e);
       setError(e?.message ?? "Failed to fetch sale state");
     } finally {
       setLoading(false);
@@ -38,19 +50,22 @@ export default function StatePanel({ autoRefreshMs = 25_000 }: { autoRefreshMs?:
   }
 
   // initial fetch
-  useEffect(() => {
-    handleRefresh();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  useEffect(() => { handleRefresh(); }, []);
 
-  // optional auto-refresh while the app is open
+  // refresh when parent “pokes” us (after buy/withdraw)
+  useEffect(() => { handleRefresh(); }, [refreshSignal]);
+
+  // silent auto-refresh (no spinner flicker)
   useEffect(() => {
+    const interval = Math.max(5_000, Number(autoRefreshMs) || 0);
+    if (!interval) return;
     const id = setInterval(() => {
-      // don’t stack if a fetch is in flight
-      if (!loading) handleRefresh();
-    }, autoRefreshMs);
+      fetchSaleState(provider ?? undefined, account ?? undefined)
+        .then((s) => setSale(s))
+        .catch(() => {});
+    }, interval);
     return () => clearInterval(id);
-  }, [autoRefreshMs, loading]);
+  }, [autoRefreshMs, provider, account]);
 
   return (
     <section className="bg-white rounded-2xl shadow p-5 mb-6">
@@ -70,7 +85,16 @@ export default function StatePanel({ autoRefreshMs = 25_000 }: { autoRefreshMs?:
         <div>Loading…</div>
       ) : sale ? (
         <ul className="space-y-1">
-          <li>Rate: {fmt(sale.rate)}{sale.tokenSym ? ` ${sale.tokenSym}` : ""} per ETH</li>
+          <li>
+            Rate: {fmt(sale.rate)}
+            {sale.tokenSym ? ` ${sale.tokenSym}` : ""} per ETH
+          </li>
+
+          {/* user's token balance */}
+          {sale.userToken != null && sale.tokenSym ? (
+            <li>My balance: {fmt(sale.userToken)} {sale.tokenSym}</li>
+          ) : null}
+
           <li>Cap: {fmt(sale.capEth)} ETH</li>
           <li>Raised (lifetime): {fmt(sale.raisedEth)} ETH</li>
           <li>Balance (current): {fmt(sale.balanceEth)} ETH</li>
