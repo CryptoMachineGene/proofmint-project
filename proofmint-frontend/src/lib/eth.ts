@@ -124,10 +124,11 @@ export async function buyWithAuto(provider: BrowserProvider, ethAmount: string) 
 export const buyETH = buyWithAuto;
 
 export async function withdrawRaised(provider: BrowserProvider) {
+  if (!CROWDSALE_ADDRESS) throw new Error("Missing crowdsale address.");
   const signer = await provider.getSigner();
-  const { crowdsale } = getContracts(provider);
-  const tx = await crowdsale.connect(signer).withdraw();
-  return tx; // return tx (UI can call tx.wait() and show hash immediately)
+  const sale = new Contract(CROWDSALE_ADDRESS, ["function withdraw()"], signer);
+  const tx = await sale.withdraw();
+  return tx; // caller may await tx.wait()
 }
 
 export async function fetchSaleState(

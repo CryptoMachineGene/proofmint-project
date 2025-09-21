@@ -1,8 +1,10 @@
-// src/components/BuyForm.tsx
 import { useState } from "react";
 import type { BrowserProvider } from "ethers";
-import { buyWithAuto } from "../lib/eth"; // <- uses the auto fallback path we added
+import { buyWithAuto } from "../lib/eth"; // auto path you already have
 import Toast from "./ui/Toast";
+import { etherscanTx, shortHash } from "../lib/ui";
+
+type ToastState = { kind: "success" | "error"; text: string; href?: string } | null;
 
 type Props = {
   provider?: BrowserProvider | null;
@@ -12,7 +14,7 @@ type Props = {
 export default function BuyForm({ provider, onPurchased }: Props) {
   const [ethAmount, setEthAmount] = useState<string>("0.01");
   const [busy, setBusy] = useState(false);
-  const [toast, setToast] = useState<{ kind: "success" | "error"; text: string } | null>(null);
+  const [toast, setToast] = useState<ToastState>(null);
 
   const Spinner = () => (
     <span className="inline-block h-4 w-4 border-2 border-current border-t-transparent rounded-full animate-spin align-[-2px] mr-2" />
@@ -32,14 +34,24 @@ async function onBuy() {
     // send tx (auto: try direct ETH, fallback to buyTokens())
     const tx = await buyWithAuto(provider, amt);
 
-    // show a pending toast, but DON'T open Etherscan yet
-    setToast({
-      kind: "success",
-      text: `Tx sent: ${tx.hash.slice(0, 10)}… (waiting for confirmation)`,
-    });
 
-    // wait for 1 confirmation
-    await tx.wait();
+      // pending toast with short hash + etherscan link
+      setToast({
+        kind: "success",
+        text: `Submitted ${shortHash(tx.hash)} (waiting for confirmation)`,
+        href: etherscanTx(tx.hash),
+      });
+
+      // wait for 1 confirmation
+      await tx.wait();
+
+      // confirmed toast (keep the same link)
+      setToast({
+        kind: "success",
+        text: `Success: ${shortHash(tx.hash)} (confirmed)`,
+        href: etherscanTx(tx.hash),
+      });
+
 
     // now it's safe to open/link Etherscan
     const href = `https://sepolia.etherscan.io/tx/${tx.hash}`;
@@ -104,8 +116,16 @@ async function onBuy() {
       {!provider && (
         <p className="text-sm text-gray-500 mt-2">Connect a wallet to enable buying.</p>
       )}
-
-      {toast && <Toast kind={toast.kind} text={toast.text} onClose={() => setToast(null)} />}
+      
+      {/* <-- pass the link if present */}
+      {toast && (
+        <Toast
+          kind={toast.kind}
+          text={toast.text}
+          href={toast.href}             
+          onClose={() => setToast(null)}
+        />
+      )}
     </section>
   );
 }
