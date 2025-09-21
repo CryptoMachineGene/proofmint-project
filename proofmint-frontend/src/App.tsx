@@ -47,7 +47,7 @@ export default function App() {
       <Withdraw provider={wallet.provider} onAfterTx={() => {/* optional */}} />
 
       <footer className="text-xs text-gray-500 pt-4">
-        Connected: {wallet.account ?? "not connected"}
+        
       </footer>
     </main>
   );

@@ -1,8 +1,10 @@
+// proofmint-frontend/src/components/Withdraw.tsx
 import { useEffect, useState } from "react";
 import type { BrowserProvider } from "ethers";
 import { Contract } from "ethers";
 import { withdrawRaised } from "../lib/eth";
 import { CROWDSALE_ADDRESS } from "../config";
+import Toast from "./ui/Toast";
 
 const OWNABLE_ABI = ["function owner() view returns (address)"];
 
@@ -12,70 +14,70 @@ export default function Withdraw({ provider, onWithdrew }: Props) {
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [txHash, setTxHash] = useState<string | null>(null);
-  const [isOwner, setIsOwner] = useState<boolean>(false);
+  const [isOwner, setIsOwner] = useState(false);
+  const [connected, setConnected] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
-        if (!provider || !CROWDSALE_ADDRESS) return;
+        if (!provider || !CROWDSALE_ADDRESS) {
+          if (!cancelled) { setConnected(false); setIsOwner(false); }
+          return;
+        }
         const signer = await provider.getSigner();
         const me = (await signer.getAddress()).toLowerCase();
         const ownable = new Contract(CROWDSALE_ADDRESS, OWNABLE_ABI, provider);
         const owner = ((await ownable.owner()) as string).toLowerCase();
-        if (!cancelled) setIsOwner(me === owner);
+        if (!cancelled) { setConnected(true); setIsOwner(me === owner); }
       } catch {
-        if (!cancelled) setIsOwner(false);
+        if (!cancelled) { setConnected(false); setIsOwner(false); }
       }
     })();
     return () => { cancelled = true; };
   }, [provider]);
 
-  if (!isOwner) return null; // hide for non-owners
+  // Hide if not connected or not owner
+  if (!connected || !isOwner) return null;
 
-  const onClick = async () => {
-    if (!provider) return;
+  const onWithdraw = async () => {
+    if (!provider || busy) return;
     try {
       setBusy(true);
       setMsg("Sending withdraw…");
       const tx = await withdrawRaised(provider);
       setTxHash(tx.hash);
-      setMsg("Withdraw sent, waiting for confirmation…");
+      setMsg(`Tx sent: ${tx.hash.slice(0, 10)}…`);
+      window.open(`https://sepolia.etherscan.io/tx/${tx.hash}`, "_blank");
       await tx.wait();
       setMsg("Withdraw confirmed ✅");
-      onWithdrew?.();
+      onWithdrew?.(); // let parent refresh state
     } catch (e: any) {
-      const m = String(e?.shortMessage || e?.message || e || "Withdraw failed");
-      setMsg(m);
+      const m = String(e?.shortMessage || e?.message || e || "");
+      const human =
+        /user rejected/i.test(m) ? "Action canceled." :
+        /insufficient funds/i.test(m) ? "Insufficient funds for gas." :
+        /wrong network|unsupported chain|chain id/i.test(m) ? "Switch to Sepolia (11155111)." :
+        "Withdraw failed. Check owner wallet & Sepolia.";
+      setMsg(human);
     } finally {
       setBusy(false);
     }
   };
 
-  const href = txHash ? `https://sepolia.etherscan.io/tx/${txHash}` : undefined;
-
   return (
-    <section className="rounded-2xl shadow p-5 space-y-3">
-      <h2 className="text-lg font-semibold">Owner Actions</h2>
+    <section className="rounded-2xl shadow p-5 space-y-3 bg-white">
+      <div className="text-lg font-semibold">Owner Actions</div>
       <div className="flex justify-end">
         <button
-          onClick={onClick}
+          onClick={onWithdraw}
           disabled={busy}
-          className="px-4 py-2 rounded-xl border hover:bg-gray-50 disabled:opacity-60"
+          className="px-4 py-2 rounded-xl border disabled:opacity-60"
         >
           {busy ? "Withdrawing…" : "Withdraw Raised ETH"}
         </button>
       </div>
-      {msg && (
-        <p className="text-sm">
-          {msg}{" "}
-          {href && (
-            <a className="underline" href={href} target="_blank" rel="noreferrer">
-              Etherscan
-            </a>
-          )}
-        </p>
-      )}
+      {msg && <Toast message={msg} />}
     </section>
   );
 }

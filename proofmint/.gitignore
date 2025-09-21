@@ -1,5 +1,5 @@
 # Node
-node_modules
+node_modules/
 npm-debug.log*
 yarn-error.log*
 pnpm-debug.log*
@@ -7,7 +7,8 @@ pnpm-debug.log*
 
 # Env / secrets
 .env
-.env.*
+.env.local
+.env.*.local
 
 # Hardhat
 /artifacts/
@@ -22,6 +23,7 @@ pnpm-debug.log*
 # Foundry
 /out/
 /cache_forge/
+/broadcast/
 /foundry.toml.old
 
 # Frontend (Vite/React/Tailwind builds)
@@ -36,4 +38,9 @@ Thumbs.db
 # Local deployments
 deployments/latest.json
 
-node_modules/
+# Subprojects (explicit, belt-and-suspenders)
+proofmint-frontend/node_modules/
+proofmint-frontend/dist/
+proofmint-frontend/.env.local
+proofmint/node_modules/
+proofmint/.env.local
