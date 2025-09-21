@@ -1,7 +1,7 @@
-// src/components/StatePanel.tsx
 import React, { useState, useEffect } from "react";
 import type { BrowserProvider } from "ethers";
 import { fetchSaleState } from "../lib/eth";
+import { shortAddr } from "../lib/ui";
 
 type SaleState = {
   rate?: string | null;
@@ -12,7 +12,6 @@ type SaleState = {
   userToken?: string | null;
 };
 
-// zero-safe formatter
 const fmt = (v: string | number | null | undefined, d = "—") => {
   if (v === null || v === undefined) return d;
   const n = typeof v === "number" ? v : Number(v);
@@ -25,12 +24,12 @@ export default function StatePanel({
   provider,
   account,
   autoRefreshMs = 25_000,
-  refreshSignal = 0,
+  refreshSignal = 0, // bump from BuyForm / Withdraw
 }: {
   provider?: BrowserProvider | null;
   account?: string | null;
   autoRefreshMs?: number;
-  refreshSignal?: number; // ⬅️ add this
+  refreshSignal?: number;
 }) {
   const [sale, setSale] = useState<SaleState | null>(null);
   const [loading, setLoading] = useState(false);
@@ -49,13 +48,13 @@ export default function StatePanel({
     }
   }
 
-  // initial fetch
+  // first fetch
   useEffect(() => { handleRefresh(); }, []);
 
-  // refresh when parent “pokes” us (after buy/withdraw)
+  // poke refresh when BuyForm or Withdraw calls back
   useEffect(() => { handleRefresh(); }, [refreshSignal]);
 
-  // silent auto-refresh (no spinner flicker)
+  // silent auto-refresh
   useEffect(() => {
     const interval = Math.max(5_000, Number(autoRefreshMs) || 0);
     if (!interval) return;
@@ -81,26 +80,21 @@ export default function StatePanel({
 
       {error && <div className="text-red-500 mb-2">{error}</div>}
 
-      {loading && !sale ? (
-        <div>Loading…</div>
-      ) : sale ? (
+      {sale ? (
         <ul className="space-y-1">
           <li>
             Rate: {fmt(sale.rate)}
             {sale.tokenSym ? ` ${sale.tokenSym}` : ""} per ETH
           </li>
-
-          {/* user's token balance */}
           {sale.userToken != null && sale.tokenSym ? (
             <li>My balance: {fmt(sale.userToken)} {sale.tokenSym}</li>
           ) : null}
-
           <li>Cap: {fmt(sale.capEth)} ETH</li>
           <li>Raised (lifetime): {fmt(sale.raisedEth)} ETH</li>
           <li>Balance (current): {fmt(sale.balanceEth)} ETH</li>
         </ul>
       ) : (
-        <div>No data yet.</div>
+        <div>{loading ? "Loading…" : "No data yet."}</div>
       )}
     </section>
   );
