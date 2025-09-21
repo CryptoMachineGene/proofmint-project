@@ -22,17 +22,18 @@ export default function BuyForm({ provider, onPurchased }: Props) {
 
   const clean = (s: string) => s.replace(",", ".").trim();
 
-  async function onBuy() {
-    try {
-      setBusy(true);
-      setToast(null);
+async function onBuy() {
+  try {
+    setBusy(true);
+    setToast(null);
 
-      if (!provider) throw new Error("Connect a wallet first.");
-      const amt = clean(ethAmount);
-      if (!amt || Number(amt) <= 0) throw new Error("Enter a positive amount.");
+    if (!provider) throw new Error("Connect a wallet first.");
+    const amt = clean(ethAmount);
+    if (!amt || Number(amt) <= 0) throw new Error("Enter a positive amount.");
 
-      // send tx (auto: try direct ETH, fallback to buyTokens())
-      const tx = await buyWithAuto(provider, amt);
+    // send tx (auto: try direct ETH, fallback to buyTokens())
+    const tx = await buyWithAuto(provider, amt);
+
 
       // pending toast with short hash + etherscan link
       setToast({
@@ -51,30 +52,39 @@ export default function BuyForm({ provider, onPurchased }: Props) {
         href: etherscanTx(tx.hash),
       });
 
-      onPurchased?.();
-    } catch (e: any) {
-      const msg =
-        e?.shortMessage ||
-        e?.info?.error?.message ||
-        e?.cause?.reason ||
-        e?.message ||
-        String(e);
 
-      if (/user rejected|denied/i.test(msg)) {
-        setToast({ kind: "error", text: "Action canceled." });
-      } else if (/insufficient funds/i.test(msg)) {
-        setToast({ kind: "error", text: "Insufficient funds. Top up Sepolia ETH." });
-      } else if (/chain|network|wrong network|unsupported/i.test(msg)) {
-        setToast({ kind: "error", text: "Please switch to Sepolia to continue." });
-      } else if (/amount|value/i.test(msg)) {
-        setToast({ kind: "error", text: "Invalid amount. Try a small positive value (e.g., 0.01)." });
-      } else {
-        setToast({ kind: "error", text: msg });
-      }
-    } finally {
-      setBusy(false);
+    // now it's safe to open/link Etherscan
+    const href = `https://sepolia.etherscan.io/tx/${tx.hash}`;
+    setToast({
+      kind: "success",
+      text: `Success: ${tx.hash.slice(0, 10)}… (confirmed)`,
+    });
+    window.open(href, "_blank");
+
+    onPurchased?.();
+  } catch (e: any) {
+    const msg =
+      e?.shortMessage ||
+      e?.info?.error?.message ||
+      e?.cause?.reason ||
+      e?.message ||
+      String(e);
+
+    if (/user rejected|denied/i.test(msg)) {
+      setToast({ kind: "error", text: "Action canceled." });
+    } else if (/insufficient funds/i.test(msg)) {
+      setToast({ kind: "error", text: "Insufficient funds. Top up Sepolia ETH." });
+    } else if (/chain|network|wrong network|unsupported/i.test(msg)) {
+      setToast({ kind: "error", text: "Please switch to Sepolia to continue." });
+    } else if (/amount|value/i.test(msg)) {
+      setToast({ kind: "error", text: "Invalid amount. Try a small positive value (e.g., 0.01)." });
+    } else {
+      setToast({ kind: "error", text: msg });
     }
+  } finally {
+    setBusy(false);
   }
+}
 
   return (
     <section className="bg-white rounded-2xl shadow p-5 mb-6">

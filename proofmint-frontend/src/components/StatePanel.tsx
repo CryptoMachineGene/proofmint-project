@@ -24,12 +24,16 @@ export default function StatePanel({
   provider,
   account,
   autoRefreshMs = 25_000,
+
   refreshSignal = 0, // bump from BuyForm / Withdraw
+
 }: {
   provider?: BrowserProvider | null;
   account?: string | null;
   autoRefreshMs?: number;
+
   refreshSignal?: number;
+
 }) {
   const [sale, setSale] = useState<SaleState | null>(null);
   const [loading, setLoading] = useState(false);
@@ -48,6 +52,7 @@ export default function StatePanel({
     }
   }
 
+
   // first fetch
   useEffect(() => { handleRefresh(); }, []);
 
@@ -55,6 +60,7 @@ export default function StatePanel({
   useEffect(() => { handleRefresh(); }, [refreshSignal]);
 
   // silent auto-refresh
+
   useEffect(() => {
     const interval = Math.max(5_000, Number(autoRefreshMs) || 0);
     if (!interval) return;
@@ -86,9 +92,11 @@ export default function StatePanel({
             Rate: {fmt(sale.rate)}
             {sale.tokenSym ? ` ${sale.tokenSym}` : ""} per ETH
           </li>
+
           {sale.userToken != null && sale.tokenSym ? (
             <li>My balance: {fmt(sale.userToken)} {sale.tokenSym}</li>
           ) : null}
+
           <li>Cap: {fmt(sale.capEth)} ETH</li>
           <li>Raised (lifetime): {fmt(sale.raisedEth)} ETH</li>
           <li>Balance (current): {fmt(sale.balanceEth)} ETH</li>

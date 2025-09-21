@@ -43,6 +43,7 @@ export default function Withdraw({ provider, onWithdrew }: Props) {
   // Hide entirely if not connected or not owner
   if (!connected || !isOwner) return null;
 
+
   const onWithdraw = async () => {
     if (!provider || busy) return;
     try {
@@ -91,12 +92,14 @@ export default function Withdraw({ provider, onWithdrew }: Props) {
         </button>
       </div>
 
+
       {toast && (
         <Toast
           kind={toast.kind}
           text={toast.text}
           href={toast.href}
           onClose={() => setToast(null)}
+
         />
       )}
     </section>
