@@ -34,33 +34,23 @@ async function onBuy() {
     // send tx (auto: try direct ETH, fallback to buyTokens())
     const tx = await buyWithAuto(provider, amt);
 
-<<<<<<< HEAD
-      // pending toast with short hash + etherscan link
-      setToast({
-        kind: "success",
-        text: `Submitted ${shortHash(tx.hash)} (waiting for confirmation)`,
-        href: etherscanTx(tx.hash),
-      });
 
-      // wait for 1 confirmation
-      await tx.wait();
+// pending toast with short hash + etherscan link
+setToast({
+  kind: "success",
+  text: `Submitted ${shortHash(tx.hash)} (waiting for confirmation)`,
+  href: etherscanTx(tx.hash),
+});
 
-      // confirmed toast (keep the same link)
-      setToast({
-        kind: "success",
-        text: `Success: ${shortHash(tx.hash)} (confirmed)`,
-        href: etherscanTx(tx.hash),
-      });
-=======
-    // show a pending toast, but DON'T open Etherscan yet
-    setToast({
-      kind: "success",
-      text: `Tx sent: ${tx.hash.slice(0, 10)}… (waiting for confirmation)`,
-    });
+// wait for 1 confirmation
+await tx.wait();
 
-    // wait for 1 confirmation
-    await tx.wait();
->>>>>>> origin/main
+// confirmed toast (keep the same link)
+setToast({
+  kind: "success",
+  text: `Success: ${shortHash(tx.hash)} (confirmed)`,
+  href: etherscanTx(tx.hash),
+});
 
     // now it's safe to open/link Etherscan
     const href = `https://sepolia.etherscan.io/tx/${tx.hash}`;
