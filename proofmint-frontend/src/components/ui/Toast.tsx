@@ -1,8 +1,5 @@
-
+// src/components/ui/Toast.tsx
 import { useEffect, useRef, useState } from "react";
-
-type Kind = "info" | "success" | "error";
-
 
 type Kind = "info" | "success" | "error";
 
@@ -106,7 +103,6 @@ export default function Toast({
         >
           ×
         </button>
-
       )}
     </div>
   );

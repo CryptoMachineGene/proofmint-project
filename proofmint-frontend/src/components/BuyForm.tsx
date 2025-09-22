@@ -35,23 +35,22 @@ async function onBuy() {
     const tx = await buyWithAuto(provider, amt);
 
 
-      // pending toast with short hash + etherscan link
-      setToast({
-        kind: "success",
-        text: `Submitted ${shortHash(tx.hash)} (waiting for confirmation)`,
-        href: etherscanTx(tx.hash),
-      });
+// pending toast with short hash + etherscan link
+setToast({
+  kind: "success",
+  text: `Submitted ${shortHash(tx.hash)} (waiting for confirmation)`,
+  href: etherscanTx(tx.hash),
+});
 
-      // wait for 1 confirmation
-      await tx.wait();
+// wait for 1 confirmation
+await tx.wait();
 
-      // confirmed toast (keep the same link)
-      setToast({
-        kind: "success",
-        text: `Success: ${shortHash(tx.hash)} (confirmed)`,
-        href: etherscanTx(tx.hash),
-      });
-
+// confirmed toast (keep the same link)
+setToast({
+  kind: "success",
+  text: `Success: ${shortHash(tx.hash)} (confirmed)`,
+  href: etherscanTx(tx.hash),
+});
 
     // now it's safe to open/link Etherscan
     const href = `https://sepolia.etherscan.io/tx/${tx.hash}`;

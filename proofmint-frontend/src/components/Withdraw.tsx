@@ -25,24 +25,34 @@ export default function Withdraw({ provider, onWithdrew }: Props) {
     (async () => {
       try {
         if (!provider || !CROWDSALE_ADDRESS) {
-          if (!cancelled) { setConnected(false); setIsOwner(false); }
+          if (!cancelled) {
+            setConnected(false);
+            setIsOwner(false);
+          }
           return;
         }
         const signer = await provider.getSigner();
         const me = (await signer.getAddress()).toLowerCase();
         const ownable = new Contract(CROWDSALE_ADDRESS, OWNABLE_ABI, provider);
         const owner = ((await ownable.owner()) as string).toLowerCase();
-        if (!cancelled) { setConnected(true); setIsOwner(me === owner); }
+        if (!cancelled) {
+          setConnected(true);
+          setIsOwner(me === owner);
+        }
       } catch {
-        if (!cancelled) { setConnected(false); setIsOwner(false); }
+        if (!cancelled) {
+          setConnected(false);
+          setIsOwner(false);
+        }
       }
     })();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [provider]);
 
   // Hide entirely if not connected or not owner
   if (!connected || !isOwner) return null;
-
 
   const onWithdraw = async () => {
     if (!provider || busy) return;
@@ -51,6 +61,8 @@ export default function Withdraw({ provider, onWithdrew }: Props) {
       setToast({ kind: "info", text: "Sending withdraw…" });
 
       const tx = await withdrawRaised(provider);
+
+      // pending toast with short hash + etherscan link
       setToast({
         kind: "success",
         text: `Submitted ${shortHash(tx.hash)} (waiting for confirmation)`,
@@ -59,6 +71,7 @@ export default function Withdraw({ provider, onWithdrew }: Props) {
 
       await tx.wait();
 
+      // confirmed toast (keep the same link)
       setToast({
         kind: "success",
         text: `Success: ${shortHash(tx.hash)} (confirmed)`,
@@ -69,10 +82,13 @@ export default function Withdraw({ provider, onWithdrew }: Props) {
     } catch (e: any) {
       const m = String(e?.shortMessage || e?.message || e || "");
       const human =
-        /user rejected/i.test(m) ? "Action canceled." :
-        /insufficient funds/i.test(m) ? "Insufficient funds for gas." :
-        /wrong network|unsupported chain|chain id/i.test(m) ? "Switch to Sepolia (11155111)." :
-        "Withdraw failed. Check owner wallet & Sepolia.";
+        /user rejected/i.test(m)
+          ? "Action canceled."
+          : /insufficient funds/i.test(m)
+          ? "Insufficient funds for gas."
+          : /wrong network|unsupported chain|chain id/i.test(m)
+          ? "Switch to Sepolia (11155111)."
+          : "Withdraw failed. Check owner wallet & Sepolia.";
       setToast({ kind: "error", text: human });
     } finally {
       setBusy(false);
@@ -92,14 +108,12 @@ export default function Withdraw({ provider, onWithdrew }: Props) {
         </button>
       </div>
 
-
       {toast && (
         <Toast
           kind={toast.kind}
           text={toast.text}
           href={toast.href}
           onClose={() => setToast(null)}
-
         />
       )}
     </section>

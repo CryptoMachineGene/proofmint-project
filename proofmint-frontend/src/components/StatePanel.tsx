@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import type { BrowserProvider } from "ethers";
 import { fetchSaleState } from "../lib/eth";
-import { shortAddr } from "../lib/ui";
 
 type SaleState = {
   rate?: string | null;
@@ -12,6 +11,7 @@ type SaleState = {
   userToken?: string | null;
 };
 
+// zero-safe formatter
 const fmt = (v: string | number | null | undefined, d = "—") => {
   if (v === null || v === undefined) return d;
   const n = typeof v === "number" ? v : Number(v);
@@ -24,16 +24,12 @@ export default function StatePanel({
   provider,
   account,
   autoRefreshMs = 25_000,
-
   refreshSignal = 0, // bump from BuyForm / Withdraw
-
 }: {
   provider?: BrowserProvider | null;
   account?: string | null;
   autoRefreshMs?: number;
-
   refreshSignal?: number;
-
 }) {
   const [sale, setSale] = useState<SaleState | null>(null);
   const [loading, setLoading] = useState(false);
@@ -52,7 +48,6 @@ export default function StatePanel({
     }
   }
 
-
   // first fetch
   useEffect(() => { handleRefresh(); }, []);
 
@@ -60,7 +55,6 @@ export default function StatePanel({
   useEffect(() => { handleRefresh(); }, [refreshSignal]);
 
   // silent auto-refresh
-
   useEffect(() => {
     const interval = Math.max(5_000, Number(autoRefreshMs) || 0);
     if (!interval) return;
