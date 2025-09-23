@@ -12,6 +12,16 @@ Built as part of the Dapp University Blockchain Developer Mentorship.
 
 ---
 
+## Project Status
+- ✅ Contracts deployed & verified on Sepolia
+- ✅ Frontend scaffolded (wallet connect, state panel)
+- ✅ README & DEV_NOTES polish
+- ⏳ Final UI polish (screenshots, tiny UX nits)
+- ⏳ Demo video recording
+- ⏳ Portfolio site card + live demo link
+
+---
+
 ## Overview
 - **Backend (Hardhat + Foundry)**  
   - ERC20 Token  
@@ -75,22 +85,21 @@ npx hardhat test
 forge test -vv
 ```
 
----
-
-### Deploy to Sepolia (example):
+## Deploy to Sepolia (example)
+# adjust path if your deploy script differs
 ```bash
-npx hardhat run scripts/deploy_crowdsale.ts --network sepolia
+npx hardhat run scripts/deploy/03_deploy_crowdsale.ts --network sepolia
 ```
 
 ---
 
-### Frontend
-``` bash
+## How to Run(Frontend)
+```bash
 cd proofmint-frontend
 npm install
 npm run dev
 ```
-Create a ```.env.local``` file in proofmint-frontend/ with the following values (replace with your deployed addresses):
+Create a .env.local file in proofmint-frontend/ with the following values (replace with your deployed addresses):
 ```bash
 VITE_CHAIN_ID=11155111
 VITE_CHAIN_ID_HEX=0xaa36a7
@@ -106,6 +115,22 @@ VITE_FALLBACK_RPC=https://eth-sepolia.g.alchemy.com/v2/your-key
 
 ---
 
+## Known Gotchas
+Sepolia only. The dApp is coded for chain ID 11155111 (0xaa36a7). On other chains, UI is disabled and a “Switch to Sepolia” prompt appears.
+
+.env.local required. Missing or incorrect VITE_CROWDSALE_ADDR or VITE_FALLBACK_RPC can cause a blank screen or read-only state.
+
+Read-only until wallet connects. The app uses a fallback RPC for initial reads; connect your wallet for live updates + write actions.
+
+Owner-only Withdraw. The Withdraw button is hidden unless your connected wallet matches the Crowdsale owner(). This is enforced in both UI and contract.
+
+State timing. After buys/withdraws, on-chain state can take a moment to index. The UI shows toasts + an Etherscan link and then refreshes state.
+
+More docs: See proofmint-frontend/DEV_NOTES.md
+ for current Sepolia addresses and the step-by-step UI test flow.
+
+ ---
+
 ## Contracts (Sepolia)
 (Addresses update with each new deployment)
 
@@ -115,18 +140,14 @@ ProofNFT: 0x... (optional)
 
 ---
 
-## Screenshots / Demo
-*(Add screenshots or GIFs showing wallet connect, buy flow, refresh state)*
+Screenshots / Demo
+
+(Add screenshots or GIFs showing wallet connect, buy flow, refresh state)
 
 ---
 
-## License
+License
+
 MIT
 
-## Project Status
-- ✅ Contracts complete & verified on Sepolia
-- ✅ Frontend scaffolded (wallet connect, state panel)
-- ⏳ Buy/Withdraw UI polish
-- ⏳ Portfolio/demo site polish
-
-_Last updated: 2025-09-15_
+Last updated: 2025-09-22
