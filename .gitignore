@@ -11,3 +11,4 @@ proofmint-frontend/.env.local
 =======
 >>>>>>> 2a163e7 (frontend: lock Sepolia, guarded Withdraw, buyWithAuto; cleanup .env.local ignores)
 node_modules/
+DEV_NOTES-archive.md
