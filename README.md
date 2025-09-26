@@ -7,8 +7,14 @@
 ![Frontend](https://img.shields.io/badge/React-⚛-blue.svg)
 ![Network](https://img.shields.io/badge/Sepolia-Testnet-purple.svg)
 
+## 📸 Demo Screenshots
+Explore the full walkthrough of the Proofmint demo:  
+[View the Screenshot Gallery](assets/SCREENSHOTS.md)
+
+🔗 [Latest Etherscan Transaction (Sepolia)](https://sepolia.etherscan.io/tx/0x3a9f58828502faf750761a8237b1725efe5763f20f1dc9df75628d9a136be935)
+
 A full-stack dApp featuring a token crowdsale with optional NFT receipts.  
-Built as part of the Dapp University Blockchain Developer Mentorship.
+Built as part of the **Dapp University Blockchain Developer Mentorship (Capstone Project)**.
 
 ---
 
@@ -93,7 +99,7 @@ npx hardhat run scripts/deploy/03_deploy_crowdsale.ts --network sepolia
 
 ---
 
-## How to Run(Frontend)
+## How to Run (Frontend)
 ```bash
 cd proofmint-frontend
 npm install
@@ -132,22 +138,24 @@ More docs: See proofmint-frontend/DEV_NOTES.md
  ---
 
 ## Contracts (Sepolia)
-(Addresses update with each new deployment)
+<!-- CONTRACTS:START -->
+- **Crowdsale**: [`0xEcB940c13A1EF6D411f2D7E15345591eb9fce1d7`](https://sepolia.etherscan.io/address/0xEcB940c13A1EF6D411f2D7E15345591eb9fce1d7)
+- **Token (ERC-20)**: [`0x9712820E18e5f2B8cBe3da25f31b8f2F8c8576bF`](https://sepolia.etherscan.io/address/0x9712820E18e5f2B8cBe3da25f31b8f2F8c8576bF)
+- **ProofNFT (ERC-721, optional)**: [`0xd3982fF82F27c790176138BC7115C6e32AFb0ED3`](https://sepolia.etherscan.io/address/0xd3982fF82F27c790176138BC7115C6e32AFb0ED3)
 
-Crowdsale: 0x...
-Token: 0x...
-ProofNFT: 0x... (optional)
+**Recent tx:** [`0x9905c061…`](https://sepolia.etherscan.io/tx/0x9905c061baaf0457115d77b2d47555c15317bc40383ff94725d6c804a283c2c7)  _(purchase)_
+
+<details><summary>Recent (last 3)</summary>
+
+- withdraw: [`0xf760fede…`](https://sepolia.etherscan.io/tx/0xf760feded56bd78961a6c4d84364005fd48729378079ff0690641abab2f497b4)  _(2025-09-26T01:57:24.915Z)_
+- purchase: [`0x9905c061…`](https://sepolia.etherscan.io/tx/0x9905c061baaf0457115d77b2d47555c15317bc40383ff94725d6c804a283c2c7)  _(2025-09-26T01:57:13.143Z)_
+- misc: [`0xe2d368a7…`](https://sepolia.etherscan.io/tx/0xe2d368a74fa945cca1ecddc320a6e5376797698c674011a03a9012d66301d7e8)  _(2025-09-26T01:53:25.068Z)_
+
+</details>
+<!-- CONTRACTS:END -->
 
 ---
 
-Screenshots / Demo
-
-(Add screenshots or GIFs showing wallet connect, buy flow, refresh state)
-
----
-
-License
-
-MIT
-
-Last updated: 2025-09-22
+**License:** MIT  
+**Last updated:** September 22, 2025  
+**Capstone:** Dapp University Blockchain Developer Mentorship
