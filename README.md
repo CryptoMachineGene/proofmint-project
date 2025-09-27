@@ -156,6 +156,19 @@ More docs: See proofmint-frontend/DEV_NOTES.md
 
 ---
 
+## Screenshots
+| Step | Image |
+|---|---|
+| Connect (pre) | ![](assets/01_connect.png) |
+| Buy form | ![](assets/02_buy_form.png) |
+| Pending | ![](assets/03_pending.png) |
+| Confirmed | ![](assets/04_confirmed.png) |
+| State updated | ![](assets/05_state_update.png) |
+| Withdraw (owner) | ![](assets/06_withdraw.png) |
+| Balance reset | ![](assets/07_balance_reset.png) |
+
+---
+
 **License:** MIT  
 **Last updated:** September 22, 2025  
 **Capstone:** Dapp University Blockchain Developer Mentorship
