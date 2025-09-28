@@ -86,28 +86,35 @@ export default function BuyForm({ provider, onPurchased }: Props) {
     <section className="bg-white rounded-2xl shadow p-5 mb-6">
       <h2 className="text-lg font-semibold mb-3">Buy Tokens</h2>
       <div className="flex items-end gap-3">
-        <label className="flex-1">
-          <div className="text-sm text-gray-600 mb-1">Amount (ETH)</div>
-          <input
-            value={ethAmount}
-            onChange={(e) => setEthAmount(e.target.value.replace(",", "."))}
-            type="number"
-            inputMode="decimal"
-            min="0"
-            step="0.0001"
-            placeholder="0.01"
-            className="w-full border rounded-xl px-3 py-2"
-          />
-        </label>
-        <button
-          onClick={onBuy}
-          disabled={busy || !provider}
-          className="px-4 py-2 rounded-xl shadow border disabled:opacity-50"
-          title={!provider ? "Connect a wallet" : undefined}
-        >
-          {busy && <Spinner />}Buy
-        </button>
-      </div>
+    <div className="flex-1">
+      <label htmlFor="ethAmount" className="text-sm text-gray-600 mb-1 block">
+        Amount (ETH)
+      </label>
+      <input
+        id="ethAmount"
+        value={ethAmount}
+        onChange={(e) => setEthAmount(e.target.value.replace(",", "."))}
+        onBlur={(e) => setEthAmount(e.target.value.trim())}
+        onKeyDown={(e) => { if (["e","E","+","-"].includes(e.key)) e.preventDefault(); }}
+        type="number"
+        inputMode="decimal"
+        min="0"
+        step="0.0001"
+        placeholder="0.01"
+        className="w-full border rounded-xl px-3 py-2"
+      />
+      <p className="text-xs text-gray-500 mt-2">Tip: try 0.01 on Sepolia.</p>
+    </div>
+
+    <button
+      onClick={onBuy}
+      disabled={busy || !provider || Number(ethAmount) <= 0}
+      className="px-4 py-2 rounded-xl shadow border disabled:opacity-50"
+      title={!provider ? "Connect a wallet" : undefined}
+    >
+      {busy && <Spinner />}Buy
+    </button>
+  </div>
 
       {!provider && (
         <p className="text-sm text-gray-500 mt-2">Connect a wallet to enable buying.</p>
