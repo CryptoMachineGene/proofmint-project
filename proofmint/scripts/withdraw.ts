@@ -1,6 +1,8 @@
+// scripts/withdraw.ts
 import { ethers, network } from "hardhat";
 import fs from "fs";
 import path from "path";
+import { appendTx } from "./_txlog";
 
 type DeployMap = Record<string, string>;
 
@@ -23,23 +25,35 @@ async function main() {
   const saleAddr = loadAddress("Crowdsale", net);
 
   const [caller] = await ethers.getSigners();
+  const callerAddr = await caller.getAddress();
   console.log(`Network: ${net}`);
-  console.log(`Caller:  ${await caller.getAddress()} (must be owner)`);
+  console.log(`Caller:  ${callerAddr} (must be owner)`);
   console.log(`Sale:    ${saleAddr}\n`);
 
   const sale = await ethers.getContractAt("Crowdsale", saleAddr, caller);
 
-  try {
-    const bal = await ethers.provider.getBalance(saleAddr);
-    console.log(`Contract balance: ${ethers.formatEther(bal)} ETH`);
-  } catch {
-    /* ignore */
+  // Verify caller is owner
+  const owner = await sale.owner();
+  if (owner.toLowerCase() !== callerAddr.toLowerCase()) {
+    throw new Error(`Caller ${callerAddr} is not owner ${owner}`);
   }
 
+  // Pre-balance log
+  const beforeBal = await ethers.provider.getBalance(saleAddr);
+  console.log(`Contract balance (before): ${ethers.formatEther(beforeBal)} ETH`);
+
+  // Withdraw
   const tx = await sale.withdraw();
   console.log(`Tx sent: ${tx.hash}`);
   const rcpt = await tx.wait();
   console.log(`Mined in block ${rcpt?.blockNumber}`);
+
+  // Post-balance log
+  const afterBal = await ethers.provider.getBalance(saleAddr);
+  console.log(`Contract balance (after):  ${ethers.formatEther(afterBal)} ETH`);
+
+  // Log transaction automatically
+  appendTx("withdraw", tx.hash);
 }
 
 main().catch((e) => {
