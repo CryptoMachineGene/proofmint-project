@@ -1,4 +1,3 @@
-// src/App.tsx
 import { useEffect, useState } from "react";
 import ConnectButtons from "./components/ConnectButtons";
 import StatePanel from "./components/StatePanel";
@@ -61,14 +60,8 @@ export default function App() {
       />
 
       {/* Actions */}
-      <BuyForm
-        provider={wallet.provider}
-        onPurchased={bump}             // refresh panel after buy
-      />
-      <Withdraw
-        provider={wallet.provider}
-        onWithdrew={bump}              // refresh panel after withdraw
-      />
+      <BuyForm provider={wallet.provider} onPurchased={bump} />
+      <Withdraw provider={wallet.provider} onWithdrew={bump} />
 
       <footer className="text-xs text-gray-500 pt-4"></footer>
     </main>

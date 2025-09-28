@@ -2,6 +2,7 @@
 import { ethers, network } from "hardhat";
 import fs from "fs";
 import path from "path";
+import { appendTx } from "./_txlog";
 
 type DeployMap = Record<string, string>;
 
@@ -44,7 +45,11 @@ async function main() {
   console.log(`Tx sent: ${tx.hash}`);
   const rcpt = await tx.wait();
   console.log(`Mined in block ${rcpt?.blockNumber}`);
+
+  // Log transaction automatically
+  appendTx("purchase", tx.hash);
 }
+
 
 main().catch((e) => {
   console.error(e);
