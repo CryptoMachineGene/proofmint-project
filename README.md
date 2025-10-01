@@ -6,8 +6,14 @@
 ![Testing](https://img.shields.io/badge/Foundry-⚡-black.svg)
 ![Frontend](https://img.shields.io/badge/React-⚛-blue.svg)
 ![Network](https://img.shields.io/badge/Sepolia-Testnet-purple.svg)
+![License](https://img.shields.io/badge/License-MIT-green.svg)
 
-## Contracts & Links
+A full-stack dApp featuring a token crowdsale with optional NFT receipts.  
+Built as part of the **Dapp University Blockchain Developer Mentorship (Capstone Project)**.
+
+---
+
+## 🔗 Contracts & Links (Sepolia)
 
 **Network:** Sepolia (Chain ID: 11155111)
 
@@ -15,120 +21,42 @@
 - **Token (ERC-20):** [`0x9712820E18e5f2B8cBe3da25f31b8f2F8c8576bF`](https://sepolia.etherscan.io/address/0x9712820E18e5f2B8cBe3da25f31b8f2F8c8576bF)
 - **ProofNFT (ERC-721, optional):** [`0xd3982fF82F27c790176138BC7115C6e32AFb0ED3`](https://sepolia.etherscan.io/address/0xd3982fF82F27c790176138BC7115C6e32AFb0ED3)
 
-**Latest Transaction:** [`0x9905c061…`](https://sepolia.etherscan.io/tx/0x9905c061baaf0457115d77b2d47555c15317bc40383ff94725d6c804a283c2c7)
+**Latest Transaction (example):** [`0x9905c061…`](https://sepolia.etherscan.io/tx/0x9905c061baaf0457115d77b2d47555c15317bc40383ff94725d6c804a283c2c7)
 
 ---
 
-## 🚀 Proofmint Demo
+## 🚀 Demo
 
-A short, on-chain walkthrough (Sepolia) featuring connect, buy, Etherscan receipt, and owner withdraw.
+A short, on-chain walkthrough (Sepolia): connect → buy → view on Etherscan → owner withdraw.
 
-- 📸 **Screenshots gallery:** [assets/SCREENSHOTS.md](assets/SCREENSHOTS.md)  
-- 🔗 **Latest Etherscan (Sepolia):** <PASTE_TX_URL_HERE>
+- 📸 **Screenshots gallery:** [assets/SCREENSHOTS.md](assets/SCREENSHOTS.md)
 
 ### 3-minute flow
-1) Open the dApp (read-only state shows via FALLBACK_RPC).  
-2) Connect wallet → switch/allow Sepolia if prompted.  
-3) Buy `0.01` ETH → watch pending → confirmed → open Etherscan.  
-4) (Owner) Withdraw → state reflects updated balances.  
-5) Disconnect + hard refresh → read-only state persists.
+1. Open the dApp (read-only state shows via `FALLBACK_RPC`).  
+2. Connect wallet → allow/switch to **Sepolia** if prompted.  
+3. Buy `0.01` ETH → pending → confirmed → open Etherscan.  
+4. (Owner) Withdraw → state reflects updated balances.  
+5. Disconnect + hard refresh → read-only state persists.
 
 ---
 
-## 📸 Demo Screenshots
-Explore the full walkthrough of the Proofmint demo:  
-[View the Screenshot Gallery](assets/SCREENSHOTS.md)
+## 🧩 Overview
 
-A full-stack dApp featuring a token crowdsale with optional NFT receipts.  
-Built as part of the **Dapp University Blockchain Developer Mentorship (Capstone Project)**.
+**Backend (Hardhat + Foundry)**
+- ERC-20 Token
+- Crowdsale contract
+- Optional ProofNFT (receipt NFT)
 
----
-
-## Project Status
-- ✅ Contracts deployed & verified on Sepolia
-- ✅ Frontend scaffolded (wallet connect, state panel)
-- ✅ README & DEV_NOTES polish
-- ⏳ Final UI polish (screenshots, tiny UX nits)
-- ⏳ Demo video recording
-- ⏳ Portfolio site card + live demo link
+**Frontend (React + Vite + Tailwind)**
+- Wallet connect (MetaMask/Brave)
+- Live crowdsale stats
+- Buy with ETH (auto-detects payable path)
+- Owner withdraw
 
 ---
 
-## Overview
-- **Backend (Hardhat + Foundry)**  
-  - ERC20 Token  
-  - Crowdsale contract  
-  - Optional ProofNFT (NFT receipts for buyers)  
-
-- **Frontend (React + Vite + Tailwind)**  
-  - Connect wallet (MetaMask, Sepolia)  
-  - View live crowdsale stats  
-  - Purchase tokens with ETH  
-  - (Future) Display ProofNFT receipts  
-
----
-
-## 🚀 Demo Flow
-1. Connect wallet (MetaMask, Sepolia testnet)  
-2. Enter ETH amount and buy tokens  
-3. Receive tokens + auto-mint ProofNFT receipt (if enabled)  
-4. Refresh sale state to view updated stats  
-5. Withdraw balance (owner only)  
-
----
-
-## Guided Walkthrough
-
-1. Connect wallet → accept network switch to Sepolia.
-2. Enter ETH amount (default `0.01`) and **Buy**.
-3. Confirm in MetaMask → watch toast go Pending → Confirmed.
-4. Click toast → verify on **Etherscan**.
-5. State Panel updates Raised/Balance.
-6. Owner: run **Withdraw** → balance resets to 0.
-7. Hard refresh → state persists from chain.
-
----
-
-## Files & Layout
-
-- `assets/SCREENSHOTS.md` → full demo gallery  
-- `proofmint-frontend/` → React + Tailwind front-end  
-- `proofmint/` → Hardhat + Foundry contracts + scripts  
-- `deployments/sepolia.json` → addresses & metadata  
-- `deployments/txlog.json` → recent tx log
-
----
-
-## Features
-- Crowdsale contract where users can buy tokens with ETH  
-- Live stats (rate, cap, raised, balance) displayed in the frontend  
-- ERC20 token integration  
-- Optional ProofNFT receipts for token buyers  
-
----
-
-## Tech Stack
-- **Smart Contracts**: Solidity, Hardhat, Foundry, TypeScript, Ethers.js  
-- **Frontend**: React, Vite, Tailwind CSS  
-- **Network**: Sepolia testnet  
-
----
-
-## Testing
-The contracts are tested with both **Hardhat** and **Foundry** to showcase flexibility in tooling.  
-- **Hardhat** provides the main TypeScript-based workflow for compilation, deployment, and verification.  
-- **Foundry** adds fast Solidity-native tests (`forge test -vv`) for critical flows like token minting, crowdsale purchases, and reverts.  
-
-Together, these frameworks ensure the system is covered end-to-end while demonstrating cross-toolchain proficiency.
-
----
-
-## Setup
-To run Proofmint locally, clone the repo and install dependencies for both the backend (contracts) and the frontend (React app).  
-You’ll need **Node.js (>=18)**, **npm**, and a Sepolia testnet wallet funded with ETH for testing purchases.  
-The frontend also requires a `.env.local` file with deployed contract addresses and RPC configuration.
-
----
+## ⚙️ Setup
+Node 18+
 
 ### Backend
 ```bash
@@ -139,81 +67,54 @@ npx hardhat test
 forge test -vv
 ```
 
-## Deploy to Sepolia (example)
-# adjust path if your deploy script differs
+### Deploy to Sepolia (example)
 ```bash
 npx hardhat run scripts/deploy/03_deploy_crowdsale.ts --network sepolia
 ```
 
----
-
-## How to Run (Frontend)
+### Frontend
 ```bash
 cd proofmint-frontend
 npm install
 npm run dev
+npm run build && npm run preview
 ```
-Create a .env.local file in proofmint-frontend/ with the following values (replace with your deployed addresses):
-```bash
+
+#### Create `proofmint-frontend/.env.local`
+```ini
 VITE_CHAIN_ID=11155111
 VITE_CHAIN_ID_HEX=0xaa36a7
+VITE_FALLBACK_RPC=<YOUR_PUBLIC_SEPOLIA_RPC_URL>
 
-# Deployed contract addresses (Sepolia)
-VITE_TOKEN_ADDR=0x...
-VITE_NFT_ADDR=0x...
-VITE_CROWDSALE_ADDR=0x...
-
-# RPC (for reads if wallet is disconnected)
-VITE_FALLBACK_RPC=https://eth-sepolia.g.alchemy.com/v2/your-key
+VITE_CROWDSALE_ADDRESS=0xEcB940c13A1EF6D411f2D7E15345591eb9fce1d7
+VITE_TOKEN_ADDRESS=0x9712820E18e5f2B8cBe3da25f31b8f2F8c8576bF
+VITE_NFT_ADDRESS=0xd3982fF82F27c790176138BC7115C6e32AFb0ED3
 ```
 
----
+--- 
 
-## Known Gotchas
-Sepolia only. The dApp is coded for chain ID 11155111 (0xaa36a7). On other chains, UI is disabled and a “Switch to Sepolia” prompt appears.
+## 🧰 Troubleshooting
 
-.env.local required. Missing or incorrect VITE_CROWDSALE_ADDR or VITE_FALLBACK_RPC can cause a blank screen or read-only state.
+**White screen but Vite is running** → Ensure `index.html` has ``<div id="root"></div>`` and `src/main.tsx` uses `createRoot(...)`.
 
-Read-only until wallet connects. The app uses a fallback RPC for initial reads; connect your wallet for live updates + write actions.
+**“Missing VITE_*”** → Add keys to `.env.local` and restart `npm run dev`.
 
-Owner-only Withdraw. The Withdraw button is hidden unless your connected wallet matches the Crowdsale owner(). This is enforced in both UI and contract.
+**Auto-reconnect on refresh** → remove `localhost:5173` from wallet **Connected sites**, or use a Private window for the “disconnected + read-only” state.
 
-State timing. After buys/withdraws, on-chain state can take a moment to index. The UI shows toasts + an Etherscan link and then refreshes state.
-
-More docs: See proofmint-frontend/DEV_NOTES.md
- for current Sepolia addresses and the step-by-step UI test flow.
-
- ---
-
-## Contracts (Sepolia)
-
-For full contract addresses, see [Contracts & Links](#contracts--links) at the top.
-
-<details><summary>Recent Activity (last 3 txs)</summary>
-
-- withdraw: [`0xf760fede…`](https://sepolia.etherscan.io/tx/0xf760feded56bd78961a6c4d84364005fd48729378079ff0690641abab2f497b4)  _(2025-09-26)_
-- purchase: [`0x9905c061…`](https://sepolia.etherscan.io/tx/0x9905c061baaf0457115d77b2d47555c15317bc40383ff94725d6c804a283c2c7)  _(2025-09-26)_
-- misc: [`0xe2d368a7…`](https://sepolia.etherscan.io/tx/0xe2d368a74fa945cca1ecddc320a6e5376797698c674011a03a9012d66301d7e8)  _(2025-09-26)_
-
-</details>
-
-<!-- CONTRACTS:END -->
+**Withdraw fails** → only the **owner** can call `withdraw()` (enforced by the contract).
 
 ---
 
-## Screenshots
-| Step | Image |
-|---|---|
-| Connect (pre) | ![](assets/01_connect.png) |
-| Buy form | ![](assets/02_buy_form.png) |
-| Pending | ![](assets/03_pending.png) |
-| Confirmed | ![](assets/04_confirmed.png) |
-| State updated | ![](assets/05_state_update.png) |
-| Withdraw (owner) | ![](assets/06_withdraw.png) |
-| Balance reset | ![](assets/07_balance_reset.png) |
+## 🗺 Repo Layout
+- `assets/SCREENSHOTS.md` — full demo gallery  
+- `proofmint-frontend/` — React + Tailwind front-end  
+- `proofmint/` — Hardhat + Foundry contracts + scripts  
+- `deployments/sepolia.json` — addresses & metadata  
+- `deployments/txlog.json` — recent tx log
 
 ---
 
-**License:** MIT  
-**Last updated:** September 29, 2025  
-**Capstone:** Dapp University Blockchain Developer Mentorship
+## License
+MIT
+
+_Last updated: September 30, 2025_
