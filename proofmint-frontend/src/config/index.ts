@@ -1,36 +1,59 @@
-// src/config/index.ts
+// Safe config: never crash if an env is missing
 
-// Helper to grab VITE_* values from .env.local
-const env = (k: string, required = true) => {
-  const v = import.meta.env[`VITE_${k}`] as string | undefined;
-  if (required && !v) throw new Error(`Missing VITE_${k} in .env.local`);
-  return v;
+// tiny getter with defaults + warnings
+const getEnv = (
+  key: string,
+  { required = false, def = "" }: { required?: boolean; def?: string } = {}
+) => {
+  const raw = ((import.meta.env as any)[`VITE_${key}`] ?? "").toString().trim();
+  if (!raw) {
+    if (required && !def) {
+      console.warn(`[env] VITE_${key} missing — proceeding with no value`);
+    } else if (!required && !def) {
+      // optional, empty is fine
+    } else if (!raw && def) {
+      console.warn(`[env] VITE_${key} not set — using default: ${def}`);
+    }
+    return def;
+  }
+  return raw;
 };
 
-// Core chain + RPC
-export const CHAIN_ID = Number(env("CHAIN_ID"));        // e.g. 11155111
-export const CHAIN_ID_HEX = env("CHAIN_ID_HEX");        // e.g. 0xaa36a7
-export const FALLBACK_RPC = env("FALLBACK_RPC");        // your Alchemy/Infura URL
+// ----- core chain + rpc -----
+export const CHAIN_ID: number = Number(getEnv("CHAIN_ID", { def: "11155111" })) || 11155111;
+export const CHAIN_ID_HEX: string = getEnv("CHAIN_ID_HEX", { def: "0xaa36a7" }).toLowerCase();
+export const FALLBACK_RPC: string = getEnv("FALLBACK_RPC", {
+  // safe public RPC so the app still renders read-only
+  def: "https://rpc.sepolia.org",
+});
 
-// Contracts
-export const CROWDSALE_ADDRESS = env("CROWDSALE_ADDRESS");
-export const TOKEN_ADDRESS = env("TOKEN_ADDRESS", false) || null;
-export const NFT_ADDRESS = env("NFT_ADDRESS", false) || null;
+export const NETWORK = {
+  chainIdHex: CHAIN_ID_HEX,
+  name: "Sepolia",
+};
 
-// Optional convenience bundle
+// ----- contracts (optional -> null if absent) -----
+const optAddr = (v: string) => (v && v.length ? v : null);
+
+export const CROWDSALE_ADDRESS = optAddr(
+  getEnv("CROWDSALE_ADDRESS", { required: false, def: "" })
+);
+export const TOKEN_ADDRESS = optAddr(getEnv("TOKEN_ADDRESS", { required: false, def: "" }));
+export const NFT_ADDRESS = optAddr(getEnv("NFT_ADDRESS", { required: false, def: "" }));
+
+// convenience bundle (unchanged API)
 export const CONTRACTS = {
   crowdsale: CROWDSALE_ADDRESS,
   token: TOKEN_ADDRESS,
   nft: NFT_ADDRESS,
 };
 
-// Minimal network helper for auto-switch
-export const NETWORK = {
-  chainIdHex: CHAIN_ID_HEX,
-  name: "Sepolia",
-};
-
-// Debug log (remove or comment out later)
-console.log("[Config] Crowdsale:", CROWDSALE_ADDRESS);
-console.log("[Config] Token:", TOKEN_ADDRESS);
-console.log("[Config] NFT:", NFT_ADDRESS);
+// debug (feel free to remove later)
+console.log("[Config]", {
+  CHAIN_ID,
+  CHAIN_ID_HEX,
+  FALLBACK_RPC: FALLBACK_RPC?.slice(0, 36) + "…",
+  CROWDSALE_ADDRESS,
+  TOKEN_ADDRESS,
+  NFT_ADDRESS,
+});
