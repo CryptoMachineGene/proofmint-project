@@ -8,6 +8,7 @@
 ![Network](https://img.shields.io/badge/Sepolia-Testnet-purple.svg)
 ![License](https://img.shields.io/badge/License-MIT-green.svg)
 
+
 A full-stack dApp featuring a token crowdsale with optional NFT receipts.  
 Built as part of the **Dapp University Blockchain Developer Mentorship (Capstone Project)**.
 
@@ -56,7 +57,8 @@ A short, on-chain walkthrough (Sepolia): connect → buy → view on Etherscan �
 ---
 
 ## ⚙️ Setup
-Node 18+
+- **Prereqs:** `Node 18+`
+- **Env:** copy `proofmint-frontend/.env.local.example` → `.env.local` and set `VITE_FALLBACK_RPC`. (optional)
 
 ### Backend
 ```bash
@@ -95,7 +97,7 @@ VITE_NFT_ADDRESS=0xd3982fF82F27c790176138BC7115C6e32AFb0ED3
 
 ## 🧰 Troubleshooting
 
-**White screen but Vite is running** → Ensure `index.html` has ``<div id="root"></div>`` and `src/main.tsx` uses `createRoot(...)`.
+**White screen but Vite is running** → Ensure `index.html` has `<div id="root"></div>` and `src/main.tsx` uses `createRoot(...)`.
 
 **“Missing VITE_*”** → Add keys to `.env.local` and restart `npm run dev`.
 
