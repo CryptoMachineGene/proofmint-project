@@ -49,7 +49,7 @@ export default function App() {
     <main className="max-w-3xl mx-auto p-6 space-y-6">
       <header className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Proofmint Demo</h1>
-        <ConnectButtons onConnected={onConnected} />
+        <ConnectButtons account={wallet.account} onConnected={onConnected} />
       </header>
 
       {/* pass provider/account + refresh signal so we can show userToken */}
@@ -57,6 +57,9 @@ export default function App() {
         provider={wallet.provider}
         account={wallet.account}
         refreshSignal={refreshTick}
+        onDisconnect={() => {
+          setWallet({ account: null, chainId: null, provider: null });
+        }}
       />
 
       {/* Actions */}

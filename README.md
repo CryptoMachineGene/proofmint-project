@@ -19,6 +19,22 @@
 
 ---
 
+## 🚀 Proofmint Demo
+
+A short, on-chain walkthrough (Sepolia) featuring connect, buy, Etherscan receipt, and owner withdraw.
+
+- 📸 **Screenshots gallery:** [assets/SCREENSHOTS.md](assets/SCREENSHOTS.md)  
+- 🔗 **Latest Etherscan (Sepolia):** <PASTE_TX_URL_HERE>
+
+### 3-minute flow
+1) Open the dApp (read-only state shows via FALLBACK_RPC).  
+2) Connect wallet → switch/allow Sepolia if prompted.  
+3) Buy `0.01` ETH → watch pending → confirmed → open Etherscan.  
+4) (Owner) Withdraw → state reflects updated balances.  
+5) Disconnect + hard refresh → read-only state persists.
+
+---
+
 ## 📸 Demo Screenshots
 Explore the full walkthrough of the Proofmint demo:  
 [View the Screenshot Gallery](assets/SCREENSHOTS.md)
