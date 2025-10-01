@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { BrowserProvider } from "ethers";
-import { withdraw } from "../lib/eth";
+import { withdrawRaised } from "../lib/eth";
 import Toast from "./ui/Toast";
 import { etherscanTx, shortHash } from "../lib/ui";
 
@@ -10,10 +10,10 @@ type ToastState =
 
 type Props = {
   provider?: BrowserProvider | null;
-  onWithdrew?: () => void;  // ✅ matches App.tsx
+  onWithdrew?: () => void;  // matches App.tsx
 };
 
-export default function Withdraw({ provider, onWithdrew }: Props) {  // ✅ name matches import
+export default function Withdraw({ provider, onWithdrew }: Props) {  // name matches import
   const [busy, setBusy] = useState(false);
   const [toast, setToast] = useState<ToastState>(null);
 
@@ -28,7 +28,7 @@ export default function Withdraw({ provider, onWithdrew }: Props) {  // ✅ name
 
       if (!provider) throw new Error("Connect a wallet first.");
 
-      const tx = await withdraw(provider);
+      const tx = await withdrawRaised(provider);
 
       // Pending toast (optional but nicer UX)
       setToast({
@@ -45,7 +45,7 @@ export default function Withdraw({ provider, onWithdrew }: Props) {  // ✅ name
         href: etherscanTx(tx.hash),
       });
 
-      onWithdrew?.();  // ✅ callback name aligned
+      onWithdrew?.();  // callback name aligned
     } catch (e: any) {
       const msg =
         e?.shortMessage ||
