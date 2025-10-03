@@ -22,15 +22,15 @@ Built as part of the **Dapp University Blockchain Developer Mentorship (Capstone
 - **Token (ERC-20):** [`0x9712820E18e5f2B8cBe3da25f31b8f2F8c8576bF`](https://sepolia.etherscan.io/address/0x9712820E18e5f2B8cBe3da25f31b8f2F8c8576bF)
 - **ProofNFT (ERC-721, optional):** [`0xd3982fF82F27c790176138BC7115C6e32AFb0ED3`](https://sepolia.etherscan.io/address/0xd3982fF82F27c790176138BC7115C6e32AFb0ED3)
 
-**Latest Transaction (example):** [`0x9905c061…`](https://sepolia.etherscan.io/tx/0x9905c061baaf0457115d77b2d47555c15317bc40383ff94725d6c804a283c2c7)
+- **Latest example tx:** [`0x09097d8066…`](https://sepolia.etherscan.io/tx/0x09097d80660c4a6ec44a0d922816c8a455430b29f3bdfb3efa2f07cec8202dc5)  
+- **Screenshots gallery:** [assets/SCREENSHOTS.md](assets/SCREENSHOTS.md)  
+- **Tx Log:** [deployments/txlog.json](proofmint/deployments/txlog.json)
 
 ---
 
 ## 🚀 Demo
 
 A short, on-chain walkthrough (Sepolia): connect → buy → view on Etherscan → owner withdraw.
-
-- 📸 **Screenshots gallery:** [assets/SCREENSHOTS.md](assets/SCREENSHOTS.md)
 
 ### 3-minute flow
 1. Open the dApp (read-only state shows via `FALLBACK_RPC`).  
@@ -119,4 +119,4 @@ VITE_NFT_ADDRESS=0xd3982fF82F27c790176138BC7115C6e32AFb0ED3
 ## License
 MIT
 
-_Last updated: September 30, 2025_
+_Last updated: October 2, 2025 · Chain: Sepolia (11155111)_
