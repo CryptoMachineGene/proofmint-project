@@ -1,0 +1,46 @@
+# Node
+node_modules/
+npm-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+!package-lock.json
+
+# Env / secrets
+.env
+.env.local
+.env.*.local
+
+# Hardhat
+/artifacts/
+/cache/
+/typechain/
+/typechain-types/
+/coverage/
+/coverage.json
+/lcov.info
+/ignition/deployments/chain-31337
+
+# Foundry
+/out/
+/cache_forge/
+/broadcast/
+/foundry.toml.old
+
+# Frontend (Vite/React/Tailwind builds)
+dist/
+.vite/
+*.tsbuildinfo
+
+# OS cruft
+.DS_Store
+Thumbs.db
+
+# Local deployments
+deployments/latest.json
+
+# Subprojects (explicit, belt-and-suspenders)
+proofmint-frontend/node_modules/
+proofmint-frontend/dist/
+proofmint-frontend/.env.local
+proofmint/node_modules/
+proofmint/.env.local

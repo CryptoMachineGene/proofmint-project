@@ -1,0 +1,31 @@
+# Build artifacts
+dist/
+dist-ssr/
+.vite/
+*.tsbuildinfo
+
+# Dependencies
+node_modules/
+
+# Local env for this app
+.env.local
+.env.*.local
+!.env.example
+!.env.local.example
+
+# Logs
+npm-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Editor / OS
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
