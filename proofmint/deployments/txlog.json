@@ -44,5 +44,10 @@
     "type": "withdraw",
     "hash": "0xf760feded56bd78961a6c4d84364005fd48729378079ff0690641abab2f497b4",
     "ts": "2025-09-26T01:57:24.915Z"
+  },
+  {
+    "type": "purchase",
+    "hash": "0x6e1ab7ea44c7dc27267294e3c8f2611f9c0b19ec33991cda5055847564cd21d0",
+    "ts": "2026-01-26T20:17:12.789Z"
   }
 ]

@@ -11,7 +11,9 @@
     "preview": "vite preview",
     "sync:deployments:local": "mkdir -p src/addresses && cp -f ../proofmint/deployments/localhost.json src/addresses/sepolia.json",
     "dev:local": "npm run sync:deployments:local && vite",
-    "dev:sepolia": "npm run sync:deployments && vite --mode sepolia"
+    "dev:sepolia": "npm run sync:deployments && vite --mode sepolia",
+    "predeploy": "npm run sync:deployments && vite build --base=/proofmint-project/",
+    "deploy": "gh-pages -d dist"
   },
   "dependencies": {
     "@walletconnect/ethereum-provider": "^2.21.8",
@@ -29,6 +31,7 @@
     "eslint": "^9.33.0",
     "eslint-plugin-react-hooks": "^5.2.0",
     "eslint-plugin-react-refresh": "^0.4.20",
+    "gh-pages": "^6.3.0",
     "globals": "^16.3.0",
     "postcss": "^8.5.6",
     "tailwindcss": "^4.1.12",

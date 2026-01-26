@@ -34,6 +34,7 @@
     "dev:sepolia": "npm run sync:deployments && vite --mode sepolia"
   },
   "devDependencies": {
+    "gh-pages": "^6.3.0",
     "wait-port": "^1.1.0"
   }
 }
