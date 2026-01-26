@@ -44,3 +44,4 @@ proofmint-frontend/dist/
 proofmint-frontend/.env.local
 proofmint/node_modules/
 proofmint/.env.local
+scripts/newWallet.ts
