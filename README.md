@@ -14,6 +14,21 @@ Built as part of the **Dapp University Blockchain Developer Mentorship (Capstone
 
 ---
 
+## 🚀 Proofmint Live Links
+
+✅ **Live dApp (Sepolia):**  
+https://cryptomachinegene.github.io/proofmint-project/
+
+🎥 **Demo Walkthrough (YouTube):**  
+https://www.youtube.com/watch?v=CatHeV8tclI
+
+📦 **Source Code Repo:**  
+https://github.com/CryptoMachineGene/proofmint-project
+
+Proofmint is an ERC-20 crowdsale with ERC-721 NFT contribution receipts, built and tested with Hardhat + Foundry.
+
+---
+
 ## 🔗 Contracts & Links (Sepolia)
 
 **Network:** Sepolia (Chain ID: 11155111)
@@ -31,6 +46,8 @@ Built as part of the **Dapp University Blockchain Developer Mentorship (Capstone
 ## 🚀 Demo
 
 A short, on-chain walkthrough (Sepolia): connect → buy → view on Etherscan → owner withdraw.
+https://gene-portfolio-web3.vercel.app/#/demo
+Network: Sepolia
 
 ### 3-minute flow
 1. Open the dApp (read-only state shows via `FALLBACK_RPC`).  
