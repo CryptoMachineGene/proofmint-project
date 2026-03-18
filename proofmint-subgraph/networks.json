@@ -1,0 +1,8 @@
+{
+  "sepolia": {
+    "Crowdsale": {
+      "address": "0xF763Dc849e86f41A8339FB4aF49B71AeB35b4F21",
+      "startBlock": 10467022
+    }
+  }
+}
