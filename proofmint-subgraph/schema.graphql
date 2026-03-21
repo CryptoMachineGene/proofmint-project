@@ -1,29 +1,38 @@
-type ReceiptMinted @entity(immutable: true) {
-  id: Bytes!
-  to: Bytes! # address
-  tokenId: BigInt! # uint256
-  paidWei: BigInt! # uint256
-  tokensOut: BigInt! # uint256
-  blockNumber: BigInt!
-  blockTimestamp: BigInt!
-  transactionHash: Bytes!
+type Buyer @entity(immutable: false) {
+  id: ID!
+  totalSpent: BigInt!
+  totalTokens: BigInt!
+  purchaseCount: Int!
+  receiptCount: Int!
+  purchases: [Purchase!]! @derivedFrom(field: "buyer")
+  receipts: [ReceiptNFT!]! @derivedFrom(field: "owner")
 }
 
-type TokensPurchased @entity(immutable: true) {
-  id: Bytes!
-  buyer: Bytes! # address
-  value: BigInt! # uint256
-  amount: BigInt! # uint256
-  blockNumber: BigInt!
-  blockTimestamp: BigInt!
-  transactionHash: Bytes!
+type Purchase @entity(immutable: true) {
+  id: ID!
+  buyer: Buyer!
+  amountETH: BigInt!
+  tokensReceived: BigInt!
+  timestamp: BigInt!
+  txHash: Bytes!
 }
 
-type Withdrawn @entity(immutable: true) {
-  id: Bytes!
-  to: Bytes! # address
-  value: BigInt! # uint256
-  blockNumber: BigInt!
-  blockTimestamp: BigInt!
-  transactionHash: Bytes!
+type ReceiptNFT @entity(immutable: true) {
+  id: ID!
+  owner: Buyer!
+  tokenId: BigInt!
+  amountETH: BigInt!
+  tokensReceived: BigInt!
+  mintedAt: BigInt!
+  txHash: Bytes!
+}
+
+type GlobalStat @entity(immutable: false) {
+  id: ID!
+  totalRaised: BigInt!
+  totalTokensSold: BigInt!
+  totalBuyers: Int!
+  totalPurchases: Int!
+  totalReceipts: Int!
+  totalWithdrawn: BigInt!
 }
