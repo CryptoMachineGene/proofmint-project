@@ -51,7 +51,11 @@ async function main() {
     console.log(`Token     (reuse): ${tokenAddr}`);
   } else {
     console.log(`Deploying Token (ERC20) ...`);
-    const token = await ethers.deployContract("Token", [], { signer: deployer });
+    const token = await ethers.deployContract(
+      "Token",
+      ["Proofmint Token", "PMT"],
+      { signer: deployer }
+    );
     await token.waitForDeployment();
     tokenAddr = await token.getAddress();
     console.log(`  Token deploy tx: ${token.deploymentTransaction()?.hash}`);
@@ -65,10 +69,8 @@ async function main() {
   }
 
   // 2) ProofNFT (always (re)deploy or reuse if desired)
-  let nftAddr = existing.ProofNFT;
-  if (nftAddr) {
-    console.log(`ProofNFT  (reuse): ${nftAddr}`);
-  } else {
+    let nftAddr: string | undefined;
+  { 
     console.log(`Deploying ProofNFT (ERC721 positional) with 3 arg(s): [ '${NFT_NAME}', '${NFT_SYMBOL}', '${NFT_BASE_URI}' ]`);
     const proofNft = await ethers.deployContract("ProofNFT", [NFT_NAME, NFT_SYMBOL, NFT_BASE_URI], { signer: deployer });
     await proofNft.waitForDeployment();
@@ -105,29 +107,59 @@ async function main() {
 
   out.Crowdsale = crowdsaleAddr;
 
-  // 4) Grant MINTER_ROLE on ProofNFT to Crowdsale (if NFT supports AccessControl)
-  //    MINTER_ROLE = keccak256("MINTER_ROLE")
-  const MINTER_ROLE = ethers.id("MINTER_ROLE");
+  // 4) Grant Crowdsale permission to mint Token
+  try {
+    const token = await ethers.getContractAt("Token", tokenAddr!, deployer);
+    const currentMinter = await token.minter();
+
+    if (currentMinter.toLowerCase() !== crowdsaleAddr.toLowerCase()) {
+      const setMinterTx = await token.setMinter(crowdsaleAddr);
+      console.log(`Setting Token minter to Crowdsale (tx: ${setMinterTx.hash})`);
+      await setMinterTx.wait();
+      console.log(`Token minter set to Crowdsale`);
+      appendTx("misc", setMinterTx.hash, {
+        contract: "Token",
+        action: "setMinter",
+        to: crowdsaleAddr,
+        network: net,
+      });
+    } else {
+      console.log(`Token minter already set to ${crowdsaleAddr}`);
+    }
+  } catch (e) {
+    console.warn(`Could not set Token minter`, e);
+  }
+
+  // 5) Grant Crowdsale permission to mint ProofNFT receipts
   try {
     const nft = await ethers.getContractAt("ProofNFT", nftAddr!, deployer);
-    const hasRole: boolean = await nft.hasRole(MINTER_ROLE, crowdsaleAddr);
+    const hasRole: boolean = await nft.hasRole(
+      ethers.id("MINTER_ROLE"),
+      crowdsaleAddr
+    );
+
     if (!hasRole) {
-      const grantTx = await nft.grantRole(MINTER_ROLE, crowdsaleAddr);
+      const grantTx = await nft.grantMinter(crowdsaleAddr);
       console.log(`Granting MINTER_ROLE to Crowdsale on ProofNFT (tx: ${grantTx.hash})`);
       await grantTx.wait();
       console.log(`Granted MINTER_ROLE to Crowdsale on ProofNFT`);
-      appendTx("misc", grantTx.hash, { contract: "ProofNFT", action: "grantRole(MINTER_ROLE)", to: crowdsaleAddr, network: net });
+      appendTx("misc", grantTx.hash, {
+        contract: "ProofNFT",
+        action: "grantMinter",
+        to: crowdsaleAddr,
+        network: net,
+      });
     } else {
       console.log(`MINTER_ROLE already granted to ${crowdsaleAddr}`);
     }
   } catch (e) {
-    console.warn(`(Optional) Could not grant MINTER_ROLE on ProofNFT — does your NFT use AccessControl?`, e);
+    console.warn(`Could not grant minter permission on ProofNFT`, e);
   }
 
-  // 5) Persist deployments
+  // 6) Persist deployments
   saveDeployments(net, out);
 
-  // 6) Pretty summary
+  // 7) Pretty summary
   console.log(
     `
     Deploy complete:
