@@ -9,7 +9,8 @@
 ![License](https://img.shields.io/badge/License-MIT-green.svg)
 
 
-A full-stack dApp featuring a token crowdsale with optional NFT receipts.  
+A full-stack dApp featuring a token crowdsale with optional NFT receipts.
+Now extended with a **GraphQL-powered analytics pipeline using The Graph** for real-time indexed insights.  
 Built as part of the **Dapp University Blockchain Developer Mentorship (Capstone Project)**.
 
 ---
@@ -50,6 +51,10 @@ Live dApp: https://cryptomachinegene.github.io/proofmint-project/
 Flow: connect → buy → verify on Etherscan → owner withdraw.
 (UI is intentionally minimal — focus is on smart contract architecture, testing, and deployment.)
 
+Analytics flow: contract events → subgraph indexing → GraphQL queries → structured insights.
+
+Includes subgraph-powered GraphQL queries for indexed analytics.
+
 ### 3-minute flow
 1. Open the dApp (read-only state shows via `FALLBACK_RPC`).  
 2. Connect wallet → allow/switch to **Sepolia** if prompted.  
@@ -71,6 +76,43 @@ Flow: connect → buy → verify on Etherscan → owner withdraw.
 - Live crowdsale stats
 - Buy with ETH (auto-detects payable path)
 - Owner withdraw
+
+---
+
+## 📊 Subgraph & Analytics Layer
+
+This project includes a full indexing and analytics pipeline using **The Graph**.
+
+- Subgraph location: `proofmint-subgraph/`
+- Indexes on-chain events from the Proofmint contracts
+- Transforms raw blockchain logs into structured, queryable data
+
+### What is indexed
+- Purchase events (crowdsale participation)
+- Token distribution data
+- NFT receipt minting
+- Wallet-level activity
+
+### 📸 Subgraph Query Examples
+
+#### Purchases (Event-Level Data)
+![Purchases](assets/subgraph-purchases.png)
+
+#### Global Stats (Aggregated Analytics)
+![Global Stats](assets/subgraph-global.png)
+
+Captured from a live subgraph deployed on Sepolia, showing indexed on-chain data exposed via GraphQL queries.
+
+### Why it matters
+
+Instead of manually parsing blockchain logs, this enables:
+- Real-time analytics  
+- Wallet behavior tracking  
+- Dashboard-ready data  
+- Queryable Web3 insights  
+
+**Pipeline:**  
+Smart Contract → Events → Subgraph → GraphQL → Analytics
 
 ---
 
@@ -126,9 +168,10 @@ VITE_NFT_ADDRESS=0xd3982fF82F27c790176138BC7115C6e32AFb0ED3
 ---
 
 ## 🗺 Repo Layout
-- `assets/SCREENSHOTS.md` — full demo gallery  
+- `proofmint/` — Hardhat + Foundry smart contracts and deployment scripts  
 - `proofmint-frontend/` — React + Tailwind front-end  
-- `proofmint/` — Hardhat + Foundry contracts + scripts  
+- `proofmint-subgraph/` — Subgraph indexing + GraphQL analytics layer  
+- `assets/SCREENSHOTS.md` — full demo gallery  
 - `deployments/sepolia.json` — addresses & metadata  
 - `deployments/txlog.json` — recent tx log
 
