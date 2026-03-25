@@ -1,5 +1,7 @@
 # Proofmint Project
 
+End-to-end Web3 system with real-time on-chain analytics.
+
 ![Status](https://img.shields.io/badge/Status-Live-success.svg)
 ![Language](https://img.shields.io/badge/Solidity-0.8.x-blue.svg)
 ![Framework](https://img.shields.io/badge/Hardhat-💛-yellow.svg)
@@ -9,9 +11,57 @@
 ![License](https://img.shields.io/badge/License-MIT-green.svg)
 
 
-A full-stack dApp featuring a token crowdsale with optional NFT receipts.
-Now extended with a **GraphQL-powered analytics pipeline using The Graph** for real-time indexed insights.  
-Built as part of the **Dapp University Blockchain Developer Mentorship (Capstone Project)**.
+
+Full-stack Web3 dApp with an ERC-20 crowdsale, optional ERC-721 NFT receipts, and a real-time analytics pipeline powered by The Graph.
+
+Includes a full analytics layer powered by The Graph for transforming raw blockchain events into structured, queryable data.
+
+Demonstrates end-to-end blockchain system design: smart contracts → frontend → indexed on-chain data → queryable insights.
+
+Built as part of the Dapp University Blockchain Developer Mentorship (Capstone Project).
+
+---
+
+## ⚡ TL;DR
+
+• ERC-20 crowdsale with optional ERC-721 receipt NFTs  
+• Fully deployed on Sepolia testnet  
+• Real-time indexing using The Graph (subgraph + GraphQL)  
+• React + Tailwind frontend with wallet interaction  
+• End-to-end system: contract → events → indexing → UI  
+
+This project focuses on system design and data flow, not just contract deployment.
+
+---
+
+### Why it matters
+
+Raw blockchain logs are difficult to work with in real applications.
+
+This project demonstrates how to transform on-chain events into structured, queryable data for real-world use cases:
+
+- Real-time analytics  
+- Wallet behavior tracking  
+- Dashboard-ready insights  
+- Queryable Web3 data via GraphQL  
+
+**Pipeline:**  
+Smart Contract → Events → Subgraph → GraphQL → Analytics
+
+---
+
+## 🛠 System Architecture (What I Built)
+
+• Smart contracts (ERC-20 token, crowdsale, ERC-721 receipt NFT)  
+• Deployment + testing (Hardhat + Foundry)  
+• Frontend (React + Tailwind, wallet integration)  
+• Subgraph (The Graph indexing + GraphQL queries)  
+• Full pipeline: contract events → indexed data → frontend display  
+
+
+
+
+
 
 ---
 
@@ -103,16 +153,19 @@ This project includes a full indexing and analytics pipeline using **The Graph**
 
 Captured from a live subgraph deployed on Sepolia, showing indexed on-chain data exposed via GraphQL queries.
 
-### Why it matters
 
-Instead of manually parsing blockchain logs, this enables:
-- Real-time analytics  
-- Wallet behavior tracking  
-- Dashboard-ready data  
-- Queryable Web3 insights  
 
-**Pipeline:**  
-Smart Contract → Events → Subgraph → GraphQL → Analytics
+
+
+
+
+
+
+
+
+
+
+
 
 ---
 
