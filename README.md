@@ -11,6 +11,7 @@ End-to-end Web3 system with real-time on-chain analytics.
 ![License](https://img.shields.io/badge/License-MIT-green.svg)
 
 
+
 Full-stack Web3 dApp with an ERC-20 crowdsale, optional ERC-721 NFT receipts, and a real-time analytics pipeline powered by The Graph.
 
 Includes a full analytics layer powered by The Graph for transforming raw blockchain events into structured, queryable data.
@@ -56,6 +57,11 @@ Smart Contract → Events → Subgraph → GraphQL → Analytics
 • Frontend (React + Tailwind, wallet integration)  
 • Subgraph (The Graph indexing + GraphQL queries)  
 • Full pipeline: contract events → indexed data → frontend display  
+
+
+
+
+
 
 ---
 
@@ -146,6 +152,20 @@ This project includes a full indexing and analytics pipeline using **The Graph**
 ![Global Stats](assets/subgraph-global.png)
 
 Captured from a live subgraph deployed on Sepolia, showing indexed on-chain data exposed via GraphQL queries.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 ---
 
